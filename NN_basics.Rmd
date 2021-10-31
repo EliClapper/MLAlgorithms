@@ -62,12 +62,77 @@ print(layer_output)
 
 lets try it with matrix algebra which makes it a million times more efficient
 ```{r}
-X <- c(1, 4, 2, 0.5) #vector
+X <- c(1, 4, 2, 0.5)#vector
 weights <- cbind(c(0.4, 1.1, -0.3, -2), c(1, 0.4, -2.1, -1), c(0.2, 0.1, 2.2, -0.5)) #instead of a list, we create a matrix
 bias <- c(1.3, 1.4, 0.3) #vector
 
 layer_output <- bias + X%*%weights #this used dot product of X with every column of weights and we add the bias
 print(layer_output)
+
+```
+okay, but suppose now that we dont have one set of input neurons, but 3 sets. So as input we have instead of 1 layer 4 neurons, we have 3 layers of 4 neurons. Note that the weights and biases are characteristics of the output neuron and so we do not have to change those. We basically try to fit the same linear model on all 3 sets of input neurons.This means that for every output neuron, we should get an estimate for every input layer, meaning 3*3 final estimates.
+```{r}
+X <- cbind(c(1, 4, 2, 0.5),c(0.5, 2, -0.2, 0.3),c(1.1, -1.5, -1.2, 0.1)) #this is now a matrix
+weights <- cbind(c(0.4, 1.1, -0.3, -2), c(1, 0.4, -2.1, -1), c(0.2, 0.1, 2.2, -0.5)) 
+bias <- c(1.3, 1.4, 0.3) #vector
+
+#layer_output <- bias + X%*%weights #This doesn't work now, because you cannot take the dot product of a 4X3 matrix with a 4X3 matrix. That is because we multiply the rows of X with the columns of weights. It will try to multiply index X[1,4] (=non-existent) with index weights[4,1] (=-2.0)
+# We also need to think what we want to do. We want to multiply every column of X with every column of weights, but this is only possible if we transpose the weights matrix because in matrix algebra if we have a%*%b, then the rows of a are multiplied with the columns of b.
+
+layer_output <- bias + t(weights)%*%X #this should work
+print(layer_output) #note how the first column are the estimates of the 3 output neurons for the first set of input neurons
+
+```
+
+Now we will add another layer. So we have 3 input layers, each consiting of 4 neurons. They feed into 3 output neurons which in turn serve as input for another layer of 3 neurons. This means the weights matrix for the second layer is 3*3. This means we have 3 layers now, an input, a hidden and an output. But do note that we have 3 seperate input layers.
+
+```{r}
+X <- cbind(c(1, 4, 2, 0.5),c(0.5, 2, -0.2, 0.3),c(1.1, -1.5, -1.2, 0.1)) #this is now a matrix
+weights <- cbind(c(0.4, 1.1, -0.3, -2), c(1, 0.4, -2.1, -1), c(0.2, 0.1, 2.2, -0.5)) 
+bias <- c(1.3, 1.4, 0.3) #vector
+
+weights2 <- cbind(c(1.4, 0.1, -0.2), c(-2.3, 1.2, -1.1), c(-0.2, 2.1, 0.2)) 
+bias2 <- c(2.3, 1.1, 0.1) #vector
+
+layer1_output <- bias + t(weights)%*%X #this is output of layer one which become input of layer 2
+dim(layer1_output) #note this is a 3*3 matrix with every column being the output of 1 neuron, and we want to multiply this matrix with a:
+dim(weights2) #3x3 matrix
+
+#we now want the columns of weights to be multiplied with the columns of layer1 output. Since matrix algebra multiplies rows with columns we have to transpose weights 2 again
+layer2_output <- bias2 + t(weights2)%*%layer1_output
+
+```
+
+We want to be able to iteratively create new outputs based on new inputs. However, we also need initial values for to be estimated parameters: weights and biases, so we will create a function that generates initial values, takes input values and creates output values.
+```{r}
+#our input is still a matrix of 3 neurons sets of 4 input neurons
+X <- cbind(c(1, 4, 2, 0.5),c(0.5, 2, -0.2, 0.3),c(1.1, -1.5, -1.2, 0.1))
+
+#this function creates matrix of initial values for the weights of the first layer dependent on how many input and output neurons that layer has. Also note that all this time weights had neurons as columns and weights as rows. If we dont want to transpose all the time, we can make our weight matrix already transposed by setting the rows to be neurons and the weights as columns
+set.seed(100)
+Ini_values <- function(n_inputs, n_neurons){
+  initial_weights <- matrix(runif(n_inputs*n_neurons, -0.1, 0.1), nrow = n_neurons, ncol =
+                               n_inputs)
+  initial_biases <- runif(n_neurons, -0.01, 0.01)
+  initial_values <- list(iniw = initial_weights, inib = initial_biases)
+  return(initial_values)
+}
+
+#this function takes the biases and weights from a layer and multiplies them with the input matrix
+forward <- function(m_inputs, m_weights, v_biases){
+  output <- v_biases + m_weights%*%m_inputs
+}
+
+#because we have three initial input neurons with 4 values each (X = 4*3), we need ncol = n_inputs to be 4. This might seem contradictory, but it is because we dont transpose the matrix, but rather set nrow to n_neurons
+first_layer <- Ini_values(4,6) #we specify a first layer that has 4 output neurons and 3 input neurons, note that the rows of iniw are thus the neurons and columns are weights because we transposed
+second_layer <- Ini_values(6,5) #this means that the columns for our next layer must be the same size as the amount of output neurons of our previous layer
+
+#we can pass the output of the first layer to be the input of the second.
+layer1_output <- forward(X, first_layer$iniw, first_layer$inib)
+layer2_output<- forward(layer1_output, second_layer$iniw, second_layer$inib)
+print(layer1_output)
+print(layer2_output)
+
 
 ```
 
