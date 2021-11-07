@@ -107,15 +107,15 @@ print(layer2_output)
 We want to be able to iteratively create new outputs based on new inputs. However, we also need initial values for to be estimated parameters: weights and biases, so we will create a function that generates initial values, takes input values and creates output values.
 ```{r}
 #our input is still a matrix of 3 neurons sets of 4 input neurons
-X <- cbind(c(1, 4, 2, 0.5),
-           c(0.5, 2, -0.2, 0.3),
-           c(1.1, -1.5, -1.2, 0.1))
+X <- cbind(c(1, 2, 3, 2.5),
+           c(2.0, 5.0, -1.0, 2.0),
+           c(-1.5, 2.7, 3.3, 0.8))
 
 #this function creates matrix of initial values for the weights of the first layer dependent on how many input and output neurons that layer has. Also note that all this time weights had neurons as columns and weights as rows. If we dont want to transpose all the time, we can make our weight matrix already transposed by setting the rows to be neurons and the weights as columns
 set.seed(100)
 Ini_values <- function(n_inputs, n_neurons){
-  initial_weights <- matrix(runif(n_inputs*n_neurons, -0.1, 0.1), nrow = n_neurons, ncol =
-                               n_inputs)
+  initial_weights <- matrix(runif(n_inputs*n_neurons, -0.1, 0.1), nrow = n_inputs, ncol =
+                               n_neurons)
   initial_biases <- runif(n_neurons, -0.01, 0.01)
   initial_values <- list(iniw = initial_weights, inib = initial_biases)
   return(initial_values)
@@ -123,18 +123,59 @@ Ini_values <- function(n_inputs, n_neurons){
 
 #this function takes the biases and weights from a layer and multiplies them with the input matrix
 forward <- function(m_inputs, m_weights, v_biases){
-  output <- v_biases + m_weights%*%m_inputs
+  output <- v_biases + t(m_weights)%*%m_inputs
 }
 
 #because we have 4 initial input neurons and 3 sets we get X = 4*3, we thus need ncol = n_inputs to be 4. This might seem not intuitive, but that is because we don't transpose the matrix, but rather set nrow to n_neurons
-first_layer <- Ini_values(4,6) #we specify a first layer that has 6 output neurons and 4 input neurons, note that the rows of iniw are thus the neurons and columns are weights because we transposed
-second_layer <- Ini_values(6,5) #this means that the columns for our next layer must be the same size as the amount of output neurons of our previous layer, but the amount of neurons in the next layer is arbitray, lets choose 5
+first_layer <- Ini_values(4,5) #we specify a first layer that has 6 output neurons and 4 input neurons, note that the rows of iniw are thus the neurons and columns are weights because we transposed
+second_layer <- Ini_values(5,2) #this means that the columns for our next layer must be the same size as the amount of output neurons of our previous layer, but the amount of neurons in the next layer is arbitray, lets choose 5
 
 #we can pass the output of the first layer to be the input of the second.
 layer1_output <- forward(X, first_layer$iniw, first_layer$inib)
 layer2_output<- forward(layer1_output, second_layer$iniw, second_layer$inib)
-print(layer1_output)
+print(layer1_output) #each row is a neuron output and every column is a input frame 
 print(layer2_output)
+
+
+```
+
+Part 5. Activation functions
+Every layer besides the first layer has an activation function, although the activation function for the final output layer is usually a bit different.
+There are step functions, which output is 0 or 1, 
+Sigmoid functions, which output is between the interval 0 and 1. And we optimize the weights so our net loss is least
+ReLu function, output is 0 if x < = z and y with x > z. It also allows optimization. ReLu is faster than Sigmoid and easier. The power is that it can take on a lot of shapes
+If we would only tune based on weights and biases, then we would have a linear activation function. This can not take on many shapes, only linear lines and so it is not very powerful.
+
+lets code a simple activation function which takes on 0 if x <= 0 or x if x > 0
+```{r}
+X <- c(0, 2, -1, 3.3, -2.7, 1.1, 2.2, -3)
+output = c()
+
+#it can be done like this
+for(i in seq_along(X)){
+  if(X[i] > 0){
+    output <- append(output, X[i])
+  }else if(X[i] <= 0){
+    output <- append(output, 0)
+  }
+}
+
+#or even quicker, like this
+for(i in seq_along(X)){
+  output <- append(output, max(c(0,X[i])))
+}
+
+
+plot(X, output) #here 0 is the activation point bc the function 'activates' as x > 0
+
+
+ReLU_forward <- function(inputs){
+    output <- c()
+    for(i in seq_along(inputs)){
+      output <- append(output, max(0, inputs[i]))
+    }
+    return(output)
+  }
 
 
 ```
