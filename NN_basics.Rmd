@@ -161,8 +161,9 @@ for(i in seq_along(X)){
 }
 
 #or even quicker, like this
+output <- c()
 for(i in seq_along(X)){
-  output <- append(output, max(c(0,X[i])))
+  output <- append(output, max(0,X[i]))
 }
 
 
@@ -177,6 +178,31 @@ ReLU_forward <- function(inputs){
     return(output)
   }
 
+ReLU_forward(X)
 
 ```
+
+```{r}
+#function below creates spiral data
+spiral_data <- function(points, classes){
+  X <- matrix(0, nrow = points*classes, ncol = 2) #empty matrix with 2 columns
+  y <- rep(0, points*classes) #zero vector
+  for(class_number in 1:classes){ #
+    ix <- (points*(class_number-1)+1):(points*class_number) #similar to range() in python
+    r <- seq(0.0, 1, len = points) #start at 0, end at 1 with intervals of n_points
+    t <- seq(class_number*4, (class_number+1)*4, len = points) + (rnorm(points)*0.2)
+    X[ix,] <- cbind(r*sin(t*2.5), r*cos(t*2.5)) #append values to matrix X
+    y[ix] <- class_number #append class to vector y
+  }
+  return(list(X = X, y = y))
+}
+
+set.seed(6164900)
+spiral <- spiral_data(100,3)
+plot(spiral$X, col = spiral$y)
+
+
+```
+
+
 
