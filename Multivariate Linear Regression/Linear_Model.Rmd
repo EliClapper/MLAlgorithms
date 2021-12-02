@@ -1,0 +1,132 @@
+---
+title: "OLS linear model"
+author: "Eli Clapper"
+date: "02/12/2021"
+output: html_document
+---
+
+In this tutorial, an OLS linear model estimator is built from scratch that takes any number of numeric predictors.
+
+The linear model has the following form:
+```{=latex}
+\begin{equation}
+  \boldsymbol{Y} = b_0 + \boldsymbol{b}\boldsymbol{X} + \boldsymbol{\epsilon} \\
+\end{equation}
+```
+where $\boldsymbol{Y}$ represents the vector of the outcome variable, $b_0$ is the intercept, $\boldsymbol{b}$ represents the vector of weights for each input variable in matrix $\boldsymbol{X}$ and $\boldsymbol{\epsilon}$ represents the distance between $\boldsymbol{Y}$ and the linear predictor which is: $b_0 + \boldsymbol{b}\boldsymbol{X}$.
+
+Suppose we have a sample of 100 cases of which we observed an outcome variable Y and 1 input variable X, both drawn from a normal distribution. The variables are systematically correlated in the sense that X = Y with a certain amount of noise added to each observation. Increasing the SD for X would lower the relationship between X and Y. 
+```{r}
+set.seed(6164900)
+Y <- rnorm(100, 100, 15)
+X <- Y + rnorm(100, 100, 15)
+```
+We need values for $b_0$ and $b_1$ so that $\epsilon$ is minimized. There are multiple methods to do this: Ordinary Least Squares, QR decomposition, Maximum likelihood estimation and Gradient Descent to name a few. We first consider one of the easiest methods: Ordinary Least Squares.
+
+Ordinary least squares tries to minimize the Residual Sum of Squares (RSS):
+```{=latex}
+\begin{align}
+  RSS &= \sum_{i=1}^{n}(y_{i} - \beta_{0} - \sum_{j=1}^{p}\beta_{j}x_{ij})^2
+  &= \sum_{i=1}^{n}\epsilon^2_i
+\end{align}
+```
+
+With one predictor, this equation is simplified to:
+```{=latex}
+\begin{equation}
+  RSS = \sum_{i=1}^{n}(y_{i} - \beta_{0} - \beta_{1}x_{i})^2
+\end{equation}
+```
+where $y_i$ is the outcome variable for individual i, $\beta_{1}$ is the weight for the input variable $x_i$ per individual.
+
+Although not provided, it can be proven that to minimize RSS, the least squares estimates for $b_0$ and $b_1$ are:
+```{=latex}
+\begin{align}
+  \hat\beta = {\frac {{n}\sum {x_{i}y_{i}}-\sum {x_{i}}\sum {y_{i}}}{{n}\sum {x_{i}^{2}}-(\sum {x_{i}})^{2}}}
+  \hat{\alpha} ={\bar{y}}-{\hat {\beta }}\,{\bar{x}}
+\end{align}
+```
+
+
+The OLS estimates would thus be:
+```{r}
+n <- length(Y)
+b1 <- (n*sum(X*Y) - sum(X)*sum(Y)) / (n*sum(X^2) - sum(X)^2)
+b0 <- mean(Y) - b1*mean(X)
+```
+Lets take a look at how well these estimates describe our data by plotting the line
+```{r}
+plot(X,Y, main = 'Relationship between X and Y')
+abline(a = b0, b = b1)
+```
+We can see that our OLS estimates seem to give a fairly good represenation of the data.
+Let us obtain the predicted values, which are the values for X where Y falls on the regression line:
+$\hat{\boldsymbol{Y}} = b_0 + b_1\boldsymbol{X}$. We also define some metrics on which we can evaluate the predicted values. We look at RMSE, Mean Absolute Deviation, Maximal and minimal deviation. 
+```{r}
+y_pred <- b0 + b1*X
+
+metrics <- function(pred){
+  RMSE <- sqrt(mean((Y-y_pred)^2))
+  MAD <- mean(abs(Y-y_pred))
+  MaxDev <- max(abs(Y-y_pred))
+  MinDev <- min(abs(Y-y_pred))
+  R2 <- 1-(sum((Y-y_pred)^2)/sum((Y - mean(Y))^2))
+  return(list(RMSE = RMSE, MAD = MAD, MaxDev = MaxDev, MinDev = MinDev, R2 = R2))
+}
+
+```
+lets see how OLS did
+```{r}
+metrics(y_pred)
+```
+Not bad. Also if we obtain the estimates using the `lm` function, we get the similar results for the estimates. Note that the `lm` function uses QR decomposition to find estimates and not OLS. Still the metrics also are similar.
+```{r}
+fit.lin <- lm(Y~X)
+summary(fit.lin)
+metrics(fit.lin$fitted.values)
+```
+
+Lets build a simple function that obtains OLS estimates and predictions for any number of numeric input variables
+```{r}
+OLS <- function(outcome, input){
+  y <- outcome #y is outcome variable
+  x <- input #x is single input variable or matrix of input variables
+  n <- length(y) #number of cases
+  
+  if(is.null(ncol(x))){ #if X is just an input vector we do this
+    weights <- b1 <- (n*sum(x*y) - sum(x)*sum(y)) / (n*sum(x^2) - sum(x)^2)
+    intercept <- mean(y) - weights * mean(x)
+  } else{ #if its a matrix we specifiy for loop
+    weights <- c()
+    for(i in 1:ncol(x)){
+      b_i <- (n*sum(x[,i]*y) - sum(x[,i])*sum(y)) / (n*sum(x[,i]^2) - sum(x[,i])^2)
+      weights <- append(weights, b_i)
+    }
+    intercept <- mean(y) - sum(weights*(colMeans(input)))
+  }
+  
+  ypred <- intercept + rowSums(t(t(input)*weights))
+  metricz <- metrics(ypred)
+  return(list(weights = weights, predictions = ypred, metrics = metricz))
+}
+
+```
+lets see how the function does with 3 variables:
+```{r}
+ols_obj <- OLS(Y,cbind(X, rnorm(100), rnorm(100)))
+ols_obj$metrics
+ols_obj$weights
+```
+
+
+
+# ideas below
+
+There are multiple ways of doing it, but in this tutorial we use gradient descent.
+This implies we need the gradient of the RSS. These are the derivatives of the RSS with respect to b0 and b_i
+Where this gradient is lowest, the error is minimized.
+It is an iterative method where we continually put in different values for $b_0$ and $b_1$ until we find the lowest value we can find. 
+
+We can simultaneously define the learning rate. This value determines how much we learn from our previous iterations of the wanted parameters.  
+A small learning rates takes longer, but we are sur
+big learning rate takes short, but does not necessarilty get to the minimum
