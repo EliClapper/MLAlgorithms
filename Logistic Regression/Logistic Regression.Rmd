@@ -5,10 +5,16 @@ set.seed(6164900)
 Y <- rbinom(100, 1, 0.5) #simulate from binomial with probability 0.5
 X <- Y + rnorm(100, 0, 3)
 
+```
+
+```{r}
 ols <- OLS(Y, X) #retrieved from Linear_model.Rmd
 plot(X,Y) # someone with score 0 on X
 abline(ols$intercept, ols$weights)
-summary(glm(Y~X, family = 'binomial'))
+fit <- glm(Y~X, family = 'binomial')
+predval <- ifelse(fit$fitted.values >= 0.5, 1,0)
+mean(Y == predval)
+summary(fit)
 
 ```
 Plugging in OLS estimates gives us a line through the data that would predict very badly. 
@@ -33,7 +39,7 @@ MLE requires two steps:
 5.) maximize loglikelihood w.r.t parameters to be estimated ($\beta_0$ and $\beta_1$ )
 
 1.) Because Y is either 1 or 0, we should treat is as a random variable drawn from a Bernoulli distribution with a succes probability for very case:
-$S_i = \frac{1}{1+e^{\beta_0 + \beta_1X_i}}$.
+$S_i = \frac{1}{1+e^{-(\beta_0 + \beta_1X_i)}}$.
 2.) for every case, the $p(Y=y|X=\boldsymbol{x})$ = likelihood =
 $S_i^{y_i} * (1- S_i^{(1-y_i)})$
 3._If we can assume independent observations, the likelihood of this function is the product of this function over all cases.
@@ -44,17 +50,51 @@ $= \prod^n_{i=1}S_i^{y_i} * (1- S_i^{(1-y_i)})$
 $LL(\boldsymbol{\beta}) = \sum^n_{i=1}y_i*log(S_i) + (1-y_i)*log(1-S_i)$
 We need to find values for $\beta_0$ and $\beta_1$ that maximize this function. Note that $\beta_0$ and $\beta_1$ are in the term $S$.
 
-The easiest would be to set the derivative of this function to 0 to find the estimates. The internet says this does not have a closed form solution. I do not know what it means, precisely. It could mean that because we have to estimate 2 terms, we cannot find solutions for both. This is why we need an optimization algorithm to find a solution. It makes use of partial derivatives w.r.t a certain parameter. On algorithm is the Gradient Ascent algorithm.
+The easiest would be to set the derivative of this function to 0 to find the estimates. The internet says this does not have a closed form solution. I do not know what it means, precisely. It could mean that because we have to estimate 2 terms, we cannot find solutions for both. This is why we need an optimization algorithm to find a solution. The algorithm we will use is the gradient descent algorith. It makes use of partial derivatives pf $LL(\boldsymbol{\beta})$ w.r.t a certain parameter and iteratively puts in new values for $\boldsymbol{\beta}$ until the LL is maximized. However, the input is not random, but depends on the previous value of $\beta$
 
+It can be shown that the partial derivative of the LL function w.r.t a certain parameter for the bernoulli case is:
+$\frac{\partial LL(\boldsymbol{\beta})}{\partial \beta_j} = \sum^n_{i=1}(y_i - S_i)x_{ij}$ 
 
+Its unfortunately not working yet. Still have to figure out why...
 ```{r}
-loglikelihood <- function(b0, b1, X, Y){
-  sigfunc <- 1/(1+exp(b0+b1*X))
-  LLind <- sigfunc^y * (1- sigfunc^(1-y))
-  LL <- prod(LLind)
-  LLL <- log(LL)
-}
+GradDescBern <- function(Y, X, rate, thresh, maxit){
+  
+  b0 <- runif(1) #0.11 #set initial values
+  b1 <- runif(1) #0.29
+  iter <- 0
+  
+  S <- exp(b0+b1*X) #for convenience, S is defined as the sigmoid function #basically the inverse probabilities as 1-(1/(1+S)) = S/(1+S)
+  
+  y_pred <- ifelse(S/(1+S) >= 0.5, 1, 0) #obtain predicted values
+  pred_rate <- mean(Y == y_pred) #prediction rate
+
+
+  while(pred_rate < thresh){
+    Db0 <- sum(Y-exp(-1*(b0+b1*X)))
+    Db1 <- sum(X*(Y-exp(-1*(b0+b1*X))))
+    
+    b0 <- b0 - rate*Db0
+    b1 <- b1 - rate*Db1
+    
+    S <- exp(b0+b1*X)
+
+    y_pred <- ifelse(S/(1+S) >= 0.5, 1, 0)
+    pred_rate <- mean(Y == y_pred)
+    iter <- iter+1
+
+    if(iter == maxit){
+      print('maximum iterations reached')
+      return(c(b0, b1, pred_rate))
+    }
+  }
+  print(paste0('solution found after ', iter, ' iterations'))
+  return(c(b0,b1, pred_rate))
+}  
+
+GradDescBern(Y,X,rate=0.0001, 0.60, 100000) #for some reason, it converges on 0.52 instead of 0.69
+
 ```
+
 
 
 
@@ -65,9 +105,9 @@ logitm <- function(b1,b2,X){
 }
 
 plot(X,Y) # we dont model Y
-plot(X,logitm(0, 0.4, X)) #we model the logit of p(Y=1|X)
+plot(X,logitm(0.11, 0.3, X)) #we model the logit of p(Y=1|X)
 
-y_pred <- ifelse(logitm(1, 0.4, X) >= 0.5, 1,0)
+y_pred <- ifelse(logitm(0.11, -0.03, X) >= 0.5, 1,0)
 sum(y_pred == Y)
 
 ```
