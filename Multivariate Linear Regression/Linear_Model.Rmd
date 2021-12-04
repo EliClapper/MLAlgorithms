@@ -59,18 +59,18 @@ Lets take a look at how well these estimates describe our data by plotting the l
 plot(X,Y, main = 'Relationship between X and Y')
 abline(a = b0, b = b1)
 ```
-We can see that our OLS estimates seem to give a fairly good represenation of the data.
+We can see that our OLS estimates seem to give a fairly good representation of the data.
 Let us obtain the predicted values, which are the values for X where Y falls on the regression line:
 $\hat{\boldsymbol{Y}} = b_0 + b_1\boldsymbol{X}$. We also define some metrics on which we can evaluate the predicted values. We look at RMSE, Mean Absolute Deviation, Maximal and minimal deviation. 
 ```{r}
 y_pred <- b0 + b1*X
 
-metrics <- function(pred){
-  RMSE <- sqrt(mean((Y-y_pred)^2))
-  MAD <- mean(abs(Y-y_pred))
-  MaxDev <- max(abs(Y-y_pred))
-  MinDev <- min(abs(Y-y_pred))
-  R2 <- 1-(sum((Y-y_pred)^2)/sum((Y - mean(Y))^2))
+metrics <- function(obs, pred){
+  RMSE <- sqrt(mean((obs-pred)^2))
+  MAD <- mean(abs(obs-pred))
+  MaxDev <- max(abs(obs-pred))
+  MinDev <- min(abs(obs-pred))
+  R2 <- 1-(sum((obs-pred)^2)/sum((obs - mean(obs))^2))
   return(list(RMSE = RMSE, MAD = MAD, MaxDev = MaxDev, MinDev = MinDev, R2 = R2))
 }
 
@@ -79,7 +79,7 @@ lets see how OLS did
 ```{r}
 metrics(y_pred)
 ```
-Not bad. Also if we obtain the estimates using the `lm` function, we get the similar results for the estimates. Note that the `lm` function uses QR decomposition to find estimates and not OLS. Still the metrics also are similar.
+Not bad. Also if we obtain the estimates using the `lm` function, we get the similar results for the estimates. Note that the `lm` function uses QR decomposition to find estimates and not OLS. Still the metrics of performance are similar.
 ```{r}
 fit.lin <- lm(Y~X)
 summary(fit.lin)
@@ -87,11 +87,17 @@ metrics(fit.lin$fitted.values)
 ```
 
 Lets build a simple function that obtains OLS estimates and predictions for any number of numeric input variables
+**can be optimized by not having to distinguish between vector and matrix X**
 ```{r}
 OLS <- function(outcome, input){
   y <- outcome #y is outcome variable
   x <- input #x is single input variable or matrix of input variables
   n <- length(y) #number of cases
+  nx <- ifelse(is.null(ncol(x)), length(x), nrow(x)) #if x is vector length, if matrix nrow
+  
+  if(nx != n){
+    stop('length X is not of length Y')
+  }
   
   if(is.null(ncol(x))){ #if X is just an input vector we do this
     weights <- b1 <- (n*sum(x*y) - sum(x)*sum(y)) / (n*sum(x^2) - sum(x)^2)
@@ -106,13 +112,14 @@ OLS <- function(outcome, input){
   }
   
   ypred <- intercept + rowSums(t(t(input)*weights))
-  metricz <- metrics(ypred)
+  metricz <- metrics(y, ypred)
   return(list(weights = weights, predictions = ypred, metrics = metricz))
 }
 
 ```
 lets see how the function does with 3 variables:
 ```{r}
+OLS(rnorm(100), cbind(rnorm(100), rnorm(100)))
 ols_obj <- OLS(Y,cbind(X, rnorm(100), rnorm(100)))
 ols_obj$metrics
 ols_obj$weights

@@ -1,0 +1,38 @@
+
+In Logistic regression it does not make sense to draw a line through the relationship between X and Y, because Y is a probability. Drawing a regression line would give probabilities of bigger than 1 and smaller than 0.
+```{r}
+Y <- rbinom(100, 1, 0.5) #simulate from binomial with probability 0.5
+X <- Y + rnorm(100, 0, 3)
+plot(X,Y)
+
+
+```
+
+Thus we need a sigmoid function that will never go below 0 or above 1. We do so by modeling not Y itself, but P(Y = 1|X), denoted as p(x). This probability can be modeled with a sigmoid function of X:
+$p(x) = \frac{e^{\beta_0 + \beta_1X}}{1+e^{\beta_0 + \beta_1X}}$
+But this makes it difficult to estimate $\beta_0$ and $\beta_1$. 
+And so we rewrite the model like so:
+$\frac{p(x)}{1-p(x)} = e^{\beta_0 + \beta_1X}$
+and even further to obtain the so called logit function:
+$log(\frac{Y}{1-Y}) = \beta_0 + \beta_1X$
+and we arrive back at a linear function. However, this time the function models the log odds of p(x) and not p(x) itself.
+
+
+This makes it easier to estimate $\beta_0$ and $\beta_1$ to make the model fit.
+We estimate them with maximum likelihood which is a method that can be applied to non-linear methods
+
+
+
+
+
+```{r}
+logitm <- function(b1,b2,X){
+  return(exp(b1 + b2*X)/(1+exp(b1+b2*X)))
+}
+
+logitm(0, 0.4, X)
+y_pred <- ifelse(logitm(1, 0.4, X) >= 0.5, 1,0)
+sum(y_pred == Y)
+
+```
+
