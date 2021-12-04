@@ -1,0 +1,57 @@
+---
+title: "Gradient Descent Estimation"
+author: "Eli Clapper"
+date: "02/12/2021"
+output: html_document
+---
+
+```{r}
+set.seed(6164900)
+Y <- rnorm(100, 100, 15)
+X <- Y + rnorm(100, 100, 15)
+```
+
+Another way of finding $b_0$ and $b_1$ is to use a gradient descent algorithm.
+This implies we need the gradient of the RSS which are the derivatives of the RSS with respect to $b_0$ and $b_1$.
+Where this gradient is lowest, the error is minimized. It is an iterative method where we continually put in different values for $b_0$ and $b_1$ until we find the lowest value we can find. These new values do depend on old values so that the algorithm can converge. We can simultaneously define the learning rate. This value determines how much we learn from our previous iterations of the wanted parameters. A small learning rates takes longer, but we are more sure to find a fitting solution. A Big learning rate takes short, but does not necessarily get to the minimum. 
+
+the function below works, but for some reason
+```{r}
+GradientDescent <- function(Y, X, l_rate = 1E-6, thresh = 10, max_iter = 10000){
+  plot(X,Y)
+  b0 <- runif(1) #set initial values
+  b1 <- runif(1) #set initial values
+  y_pred <- b0 + b1*X
+  MSE <- mean((Y-y_pred)^2) #set initial MSE with random values
+  iter <- 0
+  
+  while(MSE > thresh){
+      Db0 <- mean(-2*(Y - y_pred)) #derivative w.r.t b0
+      Db1 <- mean(-2*X*(Y - y_pred)) #derivative w.r.t b1
+
+      b0 <- b0 - l_rate*Db0 #updated value
+      b1 <- b1 - l_rate*Db1 #updated value
+      
+      y_pred <- b0 + b1*X #update predicted values
+      MSE <- mean((Y-y_pred)^2) #update MSE
+      iter <- iter + 1 #count iterations up
+      
+      if(MSE == Inf | MSE == -Inf){
+        stop('No convergence, try a smaller learning rate such as 0.000001')
+      }
+      
+      if(iter == max_iter){
+        print('max iteration reached')
+        abline(b0,b1)
+        return(c(b0,b1))
+      }
+   }
+  print('solution found:')
+  abline(b0,b1)
+  return(c(b0,b1))
+
+}
+
+GradientDescent(Y,X)
+
+```

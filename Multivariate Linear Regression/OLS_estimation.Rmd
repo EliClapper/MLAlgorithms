@@ -1,5 +1,5 @@
 ---
-title: "OLS linear model"
+title: "OLS Estimation"
 author: "Eli Clapper"
 date: "02/12/2021"
 output: html_document
@@ -113,27 +113,14 @@ OLS <- function(outcome, input){
   
   ypred <- intercept + rowSums(t(t(input)*weights))
   metricz <- metrics(y, ypred)
-  return(list(weights = weights, predictions = ypred, metrics = metricz))
+  return(list(weights = weights, predictions = ypred, metrics = metricz, intercept = intercept))
 }
 
 ```
-lets see how the function does with 3 variables:
+lets see how the function does with X on Y and 3 variables on Y:
 ```{r}
-OLS(rnorm(100), cbind(rnorm(100), rnorm(100)))
+OLS(Y, X)
 ols_obj <- OLS(Y,cbind(X, rnorm(100), rnorm(100)))
 ols_obj$metrics
 ols_obj$weights
 ```
-
-
-
-# ideas below
-
-There are multiple ways of doing it, but in this tutorial we use gradient descent.
-This implies we need the gradient of the RSS. These are the derivatives of the RSS with respect to b0 and b_i
-Where this gradient is lowest, the error is minimized.
-It is an iterative method where we continually put in different values for $b_0$ and $b_1$ until we find the lowest value we can find. 
-
-We can simultaneously define the learning rate. This value determines how much we learn from our previous iterations of the wanted parameters.  
-A small learning rates takes longer, but we are sur
-big learning rate takes short, but does not necessarilty get to the minimum

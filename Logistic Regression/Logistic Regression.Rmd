@@ -1,12 +1,17 @@
 
-In Logistic regression it does not make sense to draw a line through the relationship between X and Y, because Y is a probability. Drawing a regression line would give probabilities of bigger than 1 and smaller than 0.
+In Logistic regression it does not make sense to draw a line through the relationship between X and Y, because Y is either 1 or 0 Drawing a regression line would give real values that can also be decimals.
 ```{r}
+set.seed(6164900)
 Y <- rbinom(100, 1, 0.5) #simulate from binomial with probability 0.5
 X <- Y + rnorm(100, 0, 3)
-plot(X,Y)
 
+ols <- OLS(Y, X) #retrieved from Linear_model.Rmd
+plot(X,Y) # someone with score 0 on X
+abline(ols$intercept, ols$weights)
+summary(glm(Y~X, family = 'binomial'))
 
 ```
+Plugging in OLS estimates gives us a line through the data that would predict very badly. 
 
 Thus we need a sigmoid function that will never go below 0 or above 1. We do so by modeling not Y itself, but P(Y = 1|X), denoted as p(x). This probability can be modeled with a sigmoid function of X:
 $p(x) = \frac{e^{\beta_0 + \beta_1X}}{1+e^{\beta_0 + \beta_1X}}$
@@ -14,13 +19,42 @@ But this makes it difficult to estimate $\beta_0$ and $\beta_1$.
 And so we rewrite the model like so:
 $\frac{p(x)}{1-p(x)} = e^{\beta_0 + \beta_1X}$
 and even further to obtain the so called logit function:
-$log(\frac{Y}{1-Y}) = \beta_0 + \beta_1X$
+$log(\frac{p(x)}{1-p(x)}) = \beta_0 + \beta_1X$
 and we arrive back at a linear function. However, this time the function models the log odds of p(x) and not p(x) itself.
 
 
 This makes it easier to estimate $\beta_0$ and $\beta_1$ to make the model fit.
-We estimate them with maximum likelihood which is a method that can be applied to non-linear methods
+We estimate them with maximum likelihood which is a method that can be applied for non-linear methods to estimate parameters.
+MLE requires two steps:
+1.) Impose Distribution on Y
+2.) Find likelihood of Y for one data point
+3.) Given independent data points, likelihood is product of individual likelihoods
+4.) Take the log of the likelihood
+5.) maximize loglikelihood w.r.t parameters to be estimated ($\beta_0$ and $\beta_1$ )
 
+1.) Because Y is either 1 or 0, we should treat is as a random variable drawn from a Bernoulli distribution with a succes probability for very case:
+$S_i = \frac{1}{1+e^{\beta_0 + \beta_1X_i}}$.
+2.) for every case, the $p(Y=y|X=\boldsymbol{x})$ = likelihood =
+$S_i^{y_i} * (1- S_i^{(1-y_i)})$
+3._If we can assume independent observations, the likelihood of this function is the product of this function over all cases.
+so:
+$L(\boldsymbol{\beta}) = \prod^n_{i=1}p(Y=y_i|X=\boldsymbol{x_i})$
+$= \prod^n_{i=1}S_i^{y_i} * (1- S_i^{(1-y_i)})$
+4.) To find maximum likelihood estimates, we need to take the derivative of this function at some point. It is easier to do that for the log of the likelihood. And so, the log of the likelihood is:
+$LL(\boldsymbol{\beta}) = \sum^n_{i=1}y_i*log(S_i) + (1-y_i)*log(1-S_i)$
+We need to find values for $\beta_0$ and $\beta_1$ that maximize this function. Note that $\beta_0$ and $\beta_1$ are in the term $S$.
+
+The easiest would be to set the derivative of this function to 0 to find the estimates. The internet says this does not have a closed form solution. I do not know what it means, precisely. It could mean that because we have to estimate 2 terms, we cannot find solutions for both. This is why we need an optimization algorithm to find a solution. It makes use of partial derivatives w.r.t a certain parameter. On algorithm is the Gradient Ascent algorithm.
+
+
+```{r}
+loglikelihood <- function(b0, b1, X, Y){
+  sigfunc <- 1/(1+exp(b0+b1*X))
+  LLind <- sigfunc^y * (1- sigfunc^(1-y))
+  LL <- prod(LLind)
+  LLL <- log(LL)
+}
+```
 
 
 
@@ -30,7 +64,9 @@ logitm <- function(b1,b2,X){
   return(exp(b1 + b2*X)/(1+exp(b1+b2*X)))
 }
 
-logitm(0, 0.4, X)
+plot(X,Y) # we dont model Y
+plot(X,logitm(0, 0.4, X)) #we model the logit of p(Y=1|X)
+
 y_pred <- ifelse(logitm(1, 0.4, X) >= 0.5, 1,0)
 sum(y_pred == Y)
 
