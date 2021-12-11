@@ -8,11 +8,8 @@ output: html_document
 In this tutorial, an OLS linear model estimator is built from scratch that takes any number of numeric predictors.
 
 The linear model has the following form:
-```{=latex}
-\begin{equation}
-  \boldsymbol{Y} = b_0 + \boldsymbol{b}\boldsymbol{X} + \boldsymbol{\epsilon} \\
-\end{equation}
-```
+$$\boldsymbol{Y} = b_0 + \boldsymbol{b}\boldsymbol{X} + \boldsymbol{\epsilon} $$
+
 where $\boldsymbol{Y}$ represents the vector of the outcome variable, $b_0$ is the intercept, $\boldsymbol{b}$ represents the vector of weights for each input variable in matrix $\boldsymbol{X}$ and $\boldsymbol{\epsilon}$ represents the distance between $\boldsymbol{Y}$ and the linear predictor which is: $b_0 + \boldsymbol{b}\boldsymbol{X}$.
 
 Suppose we have a sample of 100 cases of which we observed an outcome variable Y and 1 input variable X, both drawn from a normal distribution. The variables are systematically correlated in the sense that X = Y with a certain amount of noise added to each observation. Increasing the SD for X would lower the relationship between X and Y. 
@@ -24,28 +21,24 @@ X <- Y + rnorm(100, 100, 15)
 We need values for $b_0$ and $b_1$ so that $\epsilon$ is minimized. There are multiple methods to do this: Ordinary Least Squares, QR decomposition, Maximum likelihood estimation and Gradient Descent to name a few. We first consider one of the easiest methods: Ordinary Least Squares.
 
 Ordinary least squares tries to minimize the Residual Sum of Squares (RSS):
-```{=latex}
-\begin{align}
-  RSS &= \sum_{i=1}^{n}(y_{i} - \beta_{0} - \sum_{j=1}^{p}\beta_{j}x_{ij})^2
+$$ 
+\begin{align}   
+  RSS &= \sum_{i=1}^{n}(y_{i} - \beta_{0} - \sum_{j=1}^{p}\beta_{j}x_{ij})^2 \\
   &= \sum_{i=1}^{n}\epsilon^2_i
 \end{align}
-```
-
+$$
 With one predictor, this equation is simplified to:
-```{=latex}
-\begin{equation}
-  RSS = \sum_{i=1}^{n}(y_{i} - \beta_{0} - \beta_{1}x_{i})^2
-\end{equation}
-```
+$$RSS = \sum_{i=1}^{n}(y_{i} - \beta_{0} - \beta_{1}x_{i})^2$$
+
 where $y_i$ is the outcome variable for individual i, $\beta_{1}$ is the weight for the input variable $x_i$ per individual.
 
 Although not provided, it can be proven that to minimize RSS, the least squares estimates for $b_0$ and $b_1$ are:
-```{=latex}
+$$
 \begin{align}
-  \hat\beta = {\frac {{n}\sum {x_{i}y_{i}}-\sum {x_{i}}\sum {y_{i}}}{{n}\sum {x_{i}^{2}}-(\sum {x_{i}})^{2}}}
-  \hat{\alpha} ={\bar{y}}-{\hat {\beta }}\,{\bar{x}}
+  \hat\beta &= {\frac {{n}\sum {x_{i}y_{i}}-\sum {x_{i}}\sum {y_{i}}}{{n}\sum {x_{i}^{2}}-(\sum {x_{i}})^{2}}} \\
+  \hat{\alpha} &={\bar{y}}-{\hat {\beta }}\,{\bar{x}}
 \end{align}
-```
+$$
 
 
 The OLS estimates would thus be:
