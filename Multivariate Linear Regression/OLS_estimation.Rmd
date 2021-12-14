@@ -82,7 +82,20 @@ metrics(fit.lin$fitted.values)
 ```
 
 Lets build a simple function that obtains OLS estimates and predictions for any number of numeric input variables
-**not correct yet, this gives OLS estimates for simple linear regression. Intercept makes no sense. Need to implement linear algebra**
+
+```{r}
+OLS <- function(y, x){
+  n <- length(y)
+  x <- cbind(rep(1,n),x)
+  dfs <- n - ncol(x)
+  weights <- solve(t(x)%*%x) %*% t(x) %*% y
+
+  return(c(weights,dfs))
+}
+OLS(Y, X)
+```
+
+**below is not correct, this does not gives estimates for multivariate regression, but for simple linear and then for every variable in X separately. The intercept makes no sense** 
 ```{r}
 OLS <- function(outcome, input){
   y <- outcome #y is outcome variable
