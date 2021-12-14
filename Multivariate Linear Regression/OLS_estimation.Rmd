@@ -74,28 +74,31 @@ metrics(y_pred)
 ```
 Not bad. Also if we obtain the estimates using the `lm` function, we get the similar results for the estimates. Note that the `lm` function uses QR decomposition to find estimates and not OLS. Still the metrics of performance are similar.
 ```{r}
-X <- cbind(X, rnorm(100), rnorm(100))
-colnames(X) <- c('v', "b", "n")
 fit.lin <- lm(Y~X)
 summary(fit.lin)
 metrics(fit.lin$fitted.values)
 ```
 
-Lets build a simple function that obtains OLS estimates and predictions for any number of numeric input variables
+However, things become a bit more difficult if we want to estimate coefficients of multiple predictors simultaneously.
+**explain why**
 
+Lets build a simple function that obtains OLS estimates and predictions for any number of numeric input variables using linear algebra
 ```{r}
 OLS <- function(y, x){
-  n <- length(y)
-  x <- cbind(rep(1,n),x)
-  dfs <- n - ncol(x)
-  weights <- solve(t(x)%*%x) %*% t(x) %*% y
+  n <- length(y)         #number of observations
+  x <- cbind(rep(1,n),x) #add intercept
+  dfs <- n - ncol(x)     #degrees of freedom
+  weights <- solve(t(x)%*%x) %*% t(x) %*% y #obtain weights using linear algebra
+  
+  y_pred <- weights[1] + rowSums(t(t(x[,2:ncol(x)])*weights[2:ncol(x)])) #obtain predicted values
+  metricz <- metrics(y, y_pred) #obtain metrics of performance
 
-  return(c(weights,dfs))
+  return(list(weights = weights, `degrees of freedom` = dfs, metrics = metricz)) #return list
 }
 OLS(Y, X)
 ```
 
-**below is not correct, this does not gives estimates for multivariate regression, but for simple linear and then for every variable in X separately. The intercept makes no sense** 
+**below is not correct, this does not gives estimates for multivariate regression, but for simple linear when done for every variable in X separately. The intercept makes no sense** 
 ```{r}
 OLS <- function(outcome, input){
   y <- outcome #y is outcome variable
@@ -123,15 +126,5 @@ OLS <- function(outcome, input){
   metricz <- metrics(y, ypred)
   return(list(weights = weights, predictions = ypred, metrics = metricz, intercept = intercept))
 }
-
-```
-lets see how the function does with X on Y and 3 variables on Y:
-```{r}
-OLS(Y, X)
-ols_obj <- OLS(Y,cbind(X, rnorm(100), rnorm(100)))
-ols_obj$metrics
-ols_obj$weights
-summary(lm(Y~X[,2]))
-summary(lm(Y~X[,3]))
 
 ```
