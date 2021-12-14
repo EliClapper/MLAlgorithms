@@ -74,13 +74,15 @@ metrics(y_pred)
 ```
 Not bad. Also if we obtain the estimates using the `lm` function, we get the similar results for the estimates. Note that the `lm` function uses QR decomposition to find estimates and not OLS. Still the metrics of performance are similar.
 ```{r}
+X <- cbind(X, rnorm(100), rnorm(100))
+colnames(X) <- c('v', "b", "n")
 fit.lin <- lm(Y~X)
 summary(fit.lin)
 metrics(fit.lin$fitted.values)
 ```
 
 Lets build a simple function that obtains OLS estimates and predictions for any number of numeric input variables
-**can be optimized by not having to distinguish between vector and matrix X**
+**not correct yet, this gives OLS estimates for simple linear regression. Intercept makes no sense. Need to implement linear algebra**
 ```{r}
 OLS <- function(outcome, input){
   y <- outcome #y is outcome variable
@@ -116,4 +118,7 @@ OLS(Y, X)
 ols_obj <- OLS(Y,cbind(X, rnorm(100), rnorm(100)))
 ols_obj$metrics
 ols_obj$weights
+summary(lm(Y~X[,2]))
+summary(lm(Y~X[,3]))
+
 ```
