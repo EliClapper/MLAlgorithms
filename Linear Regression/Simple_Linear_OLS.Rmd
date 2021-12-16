@@ -5,20 +5,20 @@ date: "02/12/2021"
 output: html_document
 ---
 
-In this tutorial, an OLS linear model estimator is built from scratch that takes any number of numeric predictors.
+In this tutorial, an OLS linear model estimator is built from scratch that takes one numeric predictor and one outcome variable.
 
 The linear model has the following form:
 $$\boldsymbol{Y} = b_0 + \boldsymbol{b}\boldsymbol{X} + \boldsymbol{\epsilon} $$
 
 where $\boldsymbol{Y}$ represents the vector of the outcome variable, $b_0$ is the intercept, $\boldsymbol{b}$ represents the vector of weights for each input variable in matrix $\boldsymbol{X}$ and $\boldsymbol{\epsilon}$ represents the distance between $\boldsymbol{Y}$ and the linear predictor which is: $b_0 + \boldsymbol{b}\boldsymbol{X}$.
 
-Suppose we have a sample of 100 cases of which we observed an outcome variable Y and 1 input variable X, both drawn from a normal distribution. The variables are systematically correlated in the sense that X = Y with a certain amount of noise added to each observation. Increasing the SD for X would lower the relationship between X and Y. 
+Suppose we have a sample of 100 cases of which we observed an outcome variable Y and 1 input variable X, both drawn from a normal distribution. The variables are systematically correlated in the sense that X = Y with a certain amount of noise added to each observation. Increasing the Standard Deviation for X would lower the relationship between X and Y. 
 ```{r}
 set.seed(6164900)
 Y <- rnorm(100, 100, 15)
 X <- Y + rnorm(100, 100, 15)
 ```
-We need values for $b_0$ and $b_1$ so that $\epsilon$ is minimized. There are multiple methods to do this: Ordinary Least Squares, QR decomposition, Maximum likelihood estimation and Gradient Descent to name a few. We first consider one of the easiest methods: Ordinary Least Squares.
+We need values for $b_0$ and $b_1$ so that $\epsilon$ is minimized. There are multiple methods to do this: Ordinary Least Squares, QR decomposition, Maximum likelihood estimation using Gradient Descent to name a few. We first consider one of the easiest methods: Ordinary Least Squares.
 
 Ordinary least squares tries to minimize the Residual Sum of Squares (RSS):
 $$ 
@@ -44,8 +44,9 @@ $$
 The OLS estimates would thus be:
 ```{r}
 n <- length(Y)
-b1 <- (n*sum(X*Y) - sum(X)*sum(Y)) / (n*sum(X^2) - sum(X)^2)
 b0 <- mean(Y) - b1*mean(X)
+b1 <- (n*sum(X*Y) - sum(X)*sum(Y)) / (n*sum(X^2) - sum(X)^2)
+c(b0,b1)
 ```
 Lets take a look at how well these estimates describe our data by plotting the line
 ```{r}
@@ -58,45 +59,22 @@ $\hat{\boldsymbol{Y}} = b_0 + b_1\boldsymbol{X}$. We also define some metrics on
 ```{r}
 y_pred <- b0 + b1*X
 
-metrics <- function(obs, pred){
-  RMSE <- sqrt(mean((obs-pred)^2))
-  MAD <- mean(abs(obs-pred))
-  MaxDev <- max(abs(obs-pred))
-  MinDev <- min(abs(obs-pred))
-  R2 <- 1-(sum((obs-pred)^2)/sum((obs - mean(obs))^2))
-  return(list(RMSE = RMSE, MAD = MAD, MaxDev = MaxDev, MinDev = MinDev, R2 = R2))
-}
+source('../Used_Functions.R')
+
 
 ```
 lets see how OLS did
 ```{r}
-metrics(y_pred)
+metrics(Y, y_pred)
 ```
 Not bad. Also if we obtain the estimates using the `lm` function, we get the similar results for the estimates. Note that the `lm` function uses QR decomposition to find estimates and not OLS. Still the metrics of performance are similar.
 ```{r}
 fit.lin <- lm(Y~X)
 summary(fit.lin)
-metrics(fit.lin$fitted.values)
+metrics(Y, fit.lin$fitted.values)
 ```
 
-However, things become a bit more difficult if we want to estimate coefficients of multiple predictors simultaneously.
-**explain why**
 
-Lets build a simple function that obtains OLS estimates and predictions for any number of numeric input variables using linear algebra
-```{r}
-OLS <- function(y, x){
-  n <- length(y)         #number of observations
-  x <- cbind(rep(1,n),x) #add intercept
-  dfs <- n - ncol(x)     #degrees of freedom
-  weights <- solve(t(x)%*%x) %*% t(x) %*% y #obtain weights using linear algebra
-  
-  y_pred <- weights[1] + rowSums(t(t(x[,2:ncol(x)])*weights[2:ncol(x)])) #obtain predicted values
-  metricz <- metrics(y, y_pred) #obtain metrics of performance
-
-  return(list(weights = weights, `degrees of freedom` = dfs, metrics = metricz)) #return list
-}
-OLS(Y, X)
-```
 
 **below is not correct, this does not gives estimates for multivariate regression, but for simple linear when done for every variable in X separately. The intercept makes no sense** 
 ```{r}
