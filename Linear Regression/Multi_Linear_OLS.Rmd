@@ -7,8 +7,8 @@ https://stats.stackexchange.com/questions/46151/how-to-derive-the-least-square-e
 Lets build a simple function that obtains OLS estimates and predictions for any number of numeric input variables using linear algebra. First we simulate data.
 
 ```{r}
-y <- rnorm(100, 100, 15)
-x <- cbind(Y+rnorm(100, 100, 15), Y + rnorm(100, 100, 20))
+Y <- rnorm(100, 100, 15)
+X <- cbind(Y+rnorm(100, 100, 15), Y + rnorm(100, 100, 20))
 ```
 
 Make function
@@ -17,6 +17,10 @@ source("../Used_Functions.R") # load in function metrics().
 
 OLS <- function(y, x){
   n <- length(y)         #number of observations
+  nx <- ifelse(is.null(ncol(x)), length(x), nrow(x))
+  
+  if(nx != n){stop("lengths y and x differ")}
+  
   x <- cbind(rep(1,n),x) #add intercept
   dfs <- n - ncol(x)     #degrees of freedom
   
@@ -29,12 +33,12 @@ OLS <- function(y, x){
   ses <- sqrt(diag(varcov_weights))
   
   t_vals <- weights/ses # obtain t-values
-  p_vals <- pt(abs(t_vals), dfs, lower.tail = F) * 2 #probability of this t-value against central t-distirbution with Df = dfs two-tailed
+  p_vals <- pt(abs(t_vals), dfs, lower.tail = F) * 2 #probability of this t-value against central t-distribution with Df = dfs, two-tailed
   
   metricz <- metrics(y, y_pred) #obtain metrics of performance
   estimates <- cbind(weights, ses, t_vals, p_vals)
   colnames(estimates) <- c("weights", 'SEs', 't-value', 'p-value')
-  rownames(estimates) <- sprintf("b%02d", 1:ncol(x))
+  rownames(estimates) <- c("b0", sprintf("b%d", 1:(ncol(x)-1)))
 
   return(list(estimates = estimates, `degrees of freedom` = dfs, metrics = metricz)) #return list
 }
