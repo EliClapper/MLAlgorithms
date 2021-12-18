@@ -1,0 +1,121 @@
+---
+title: "Gradient Ascent for ML estimation"
+author: "Eli Clapper"
+date: "18/12/2021"
+output: html_document
+---
+We saw in Maximum_Likelihood.Rmd that we can get the maximum likelihood estimates of parmameters by setting the derivative w.r.t a certain parmaeter of the loglikelihood of a function to 0.
+
+Now, sometimes we cannot easily set the derivatives to 0 and solve for a particular parameter because it depends on other parameters. In reality, the derivative of the normal distributionw.r.t $\mu$ and $\sigma$ is:
+$$
+\begin{align}
+  \frac{\partial f}{\partial \mu} &= \frac{\sum^n_{i=1}(x - \mu)} {\sigma^2} \\
+  \frac{\partial f}{\partial \sigma} &=\frac{1}{2\sigma^2} \Big( -n + \frac{1}{\sigma^2} \sum\limits_{n=1}^{N} (x_{n} - \mu)^{2} \Big)\\
+\end{align}
+$$
+and we get $\hat{\mu} = \frac{\sum^n_{i = 1}x_i}{n}$ if we set the derivative w.r.t $\mu$ to 0. In the case of the normal distribution, we are lucky however that the maximum likelihood estimator of $\mu$ is independent of $\sigma$. If it were not, we could not estimate the parameters easily. 
+
+What we could do, is iteratively put in values for the unknown parameters until the expression is as close to zero as possible.
+
+A computerized algorithm that can do this for us is the Gradient Ascent/Descent algorithm. It works like this. We set random initial values for $\mu$ and $\sigma$. Then calculate the outcome of the derivatives with these estimates. Finally we update our old estimates by adding a penalized new estimates (or subtracting in GD). For $\mu$ it would look like this:
+$$\hat\mu_{new} = \hat\mu_{old} + \eta * \frac{\sum^n_{i=1}(x - \hat\mu_{old})} {\hat\sigma^2_{old}} $$
+where $\hat\mu_{old}$ and $\hat\sigma_{old}$ are known. $\eta$ is the penalty and is often set to a small value like 0.00001 so that the parameters get updated slowly, which leads to a solution with more certainty. Where 'solution' is defined when we find values for the parameters that indeed make the derivative as close to 0 as possible.
+
+because the derivative gets closer and closer to zero, $\hat\mu$ will likely not change anymore after a solution is found. After all, the most right term in equation (6) will be almost zero. If we indeed see that $\hat\mu$ does not change anymore after a lot of iteration, we say the algorithm has converged.
+
+Lets code a gradient ascent algorithm to see an example.
+```{r}
+GA <- function(x, maxit = 5000, Lrate = 0.0001){
+  n <- length(x) #number of observations
+  m = runif(1)   #initial value for the mean
+  s = runif(1)   #initial value for the variance
+  
+  LLL <- log(prod(dnorm(m,s,x))) #the loglikelihood of finding our values given our mean and sd
+  iter <- 1      #set counter for iterations
+  
+  df <- matrix(NA, nrow = maxit, ncol = 5) #df so that we can save important values
+  colnames(df) <- c('m', 's', 'LLL', 'Dm', 'Ds')
+  
+  while(iter < maxit){
+
+    Dm <- sum(x-m)/s^2 #if you plug in perfect values, it becomes zero.
+    Ds <- ((-n+1) + sum((x-m)^2)/s^2)/(2*s^2) #idem
+    df[iter,] <- c(m, s, LLL, Dm, Ds) #append to dataframe
+    
+    #actual algorithm is very simple, we just add a penalized estimate to our previous estimate
+    m <- m + Lrate * Dm #update mean
+    s <- s + Lrate*Ds   #update standard deviation
+    LLL <- log(prod(dnorm(m,s,x))) #update LLL
+
+    iter <- iter + 1 #add 1 to iter, unless it will run indefinitely
+  }
+  return(df[1:(maxit-1),]) #return df
+}
+```
+
+now lets say we have observed 11 observations for $X$, the mean and standard devations are:
+```{r}
+X <- c(0, 1.5, 0.2, 2, 2.3, 0.1, 0.4, 1.7, 1.5, 2.1, 2.2)
+mean(X)
+sd(X)
+```
+
+Let's see if the algorithm can reproduce these numbers
+```{r}
+set.seed(6164900) #set a seed, cause our initial values for mu and sigma are randomly generated
+estimates <- GA(X, maxit = 5000, Lrate = 0.001)
+mean(estimates[,1])
+mean(estimates[,2])
+```
+alright, they come very close! lets plot the estimated values for all iterations, which is called a Traceplot.
+```{r}
+plot(estimates[,1], col = 'blue', type = 'l', xlab = "Iteration", ylab = 'estimates', main = 'Traceplot Estimates')
+lines(estimates[,2], col = 'red', type = 'l')
+abline(h = mean(X), lty = 3, col = 'darkgreen')
+abline(h = sd(X), lty = 3, col = 'brown')
+legend(3000, 0.6, legend=c("GA mean", "GA sd", "true mean", "true sd" ),
+       col=c("blue", "red", "green", "brown"), lty=c(1,1,3,3), cex=1)
+
+```
+You can see that the algorithms converge very quickly (before 1000 iterations) and so we can be fairly certain that a solution has been found.
+
+This is what it would look like if we used a ten times smaller learning rate.
+```{r}
+set.seed(6164900) #set a seed, cause our initial values for mu and sigma are randomly generated
+estimates2 <- GA(X, maxit = 5000, Lrate = 0.0001)
+```
+
+```{r}
+plot(estimates2[,1], col = 'blue', type = 'l', xlab = "Iteration", ylab = 'estimates', main = 'Traceplot Estimates')
+lines(estimates2[,2], col = 'red', type = 'l')
+abline(h = mean(X), lty = 3, col = 'darkgreen')
+abline(h = sd(X), lty = 3, col = 'brown')
+legend(3000, 0.6, legend=c("GA mean", "GA sd", "true mean", "true sd" ),
+       col=c("blue", "red", "green", "brown"), lty=c(1,1,3,3), cex=1)
+
+```
+You see that convergence is slower, and so with smaller learning rates, we usually take more iterations. 
+
+now for big learning rates
+```{r}
+set.seed(6164900) #set a seed, cause our initial values for mu and sigma are randomly generated
+estimates3 <- GA(X, maxit = 5000, Lrate = 0.1)
+```
+
+```{r}
+plot(estimates3[,1], col = 'blue', type = 'l', xlab = "Iteration", ylab = 'estimates', main = 'Traceplot Estimates')
+lines(estimates3[,2], col = 'red', type = 'l')
+abline(h = mean(X), lty = 3, col = 'darkgreen')
+abline(h = sd(X), lty = 3, col = 'brown')
+legend(3000, 3, legend=c("GA mean", "GA sd", "true mean", "true sd" ),
+       col=c("blue", "red", "green", "brown"), lty=c(1,1,3,3), cex=1)
+
+```
+
+hmmm.... better stick to our original.
+
+
+**note to self, why does this mean and standard deviation produce the lowest LLL however...)**
+```{r}
+estimates[which(abs(estimates[,3]) == min(abs(estimates[,3]))),] #but this I do not get yet
+```

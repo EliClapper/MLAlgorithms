@@ -1,0 +1,71 @@
+Maximum Likelihood estimation is a way of obtaining unknown parameter that describe the distribution of a random variable.
+
+let us assume a random variable:
+$X \sim \mathcal{N}(\mu = 0,\,\sigma^{2} = 1)\,.$
+
+This means that if we take a sample of $X$ of length 1, denoted as $x_i$, we know it is drawn from this standard normal distribution. We can obtain the likelihood of sampling this specific observation by finding the point on the probability density function [PDF] for which $X = x_i$. In R, this can be obtained using the `dnorm()` function, or we can program a PDF ourselves as we know that the PDF of an normal distribution is:
+$$P(X; \mu, \sigma) = \frac{e^{-\frac{(X-\mu)^2}{2\sigma^2}}}{\sigma\sqrt{2\pi}} $$
+We find the likelihood of $X = x_i$ by plugging in the value of $x_i$ in the PDF.
+So the likelihoods of $X = 0$ and $X = 1$ and $X = -1$ are:
+```{r}
+normdist <- function(m, s, x){
+  nom <- exp(-((x-m)^2/2*s^2))
+  denom <- s*sqrt(2*pi)
+  LL <- nom/denom
+  return(LL)
+}
+
+normdist(m = 0, s = 1, c(0,1,-1))
+dnorm(c(0,1,-1), mean = 0, sd = 1)
+```
+Because 0 is in the middle of $X$ and the variance of $X$ is not extremely large, there is a larger likelihood of finding $X = 0$ than $X = 1$ or $-1$.
+
+If we assume independence between observations $x_i$, we can also easily obtain the likelihood of finding the values -1,0,1 together. Than it is just the product over the individual likelihoods!
+```{r}
+prod(normdist(m = 0, s = 1, c(0,1,-1)))
+```
+But this likelihood gets very low very quickly as we have more observations. This is because the likelihood of finding éxactly the values we obtained gets lower. Even if we have 6 observations of the most likely value, 0, the likelihood is
+```{r}
+prod(normdist(m = 0, s = 1, rep(0,6)))
+```
+0.4%.
+
+That is partly why oftentimes the Loglikelihood is reported. This is because it transforms the very small values to more easily interpretable numbers. Let's transform some very small likelihoods to their log form.
+```{r}
+LLs <- c(0.001, 0.00003, 0.004)
+log(LLs)
+```
+We see that the largest likelihood is the number closest to 0.
+
+# unknown parameters
+Usually however, we do not know the parameters that define a distribution or even the form of the distribution. Usually, we assume $X \sim \mathcal{N}(\mu,\,\sigma^{2})\,.$ but we cannot know the likelihood of some $x_i$ because $\mu$ and $\sigma$ are unknown. We need to estimate them. And one way to do that is to maximize equation 1. If we do that, we get the Maximum Likelihood estimates of $\mu$ and $\sigma$. 
+
+We can do so manually by taking the derivative with respect to a certain parameter and then solving for when the derivative = 0. This would be their maximum likelihood estimate for that parameter. Because the value for when the derivative = 0 is when the PDF is maximized. This is also why we usually take the log of the PDF. Taking the log is a trick to make derivation easier. Also, because the log is a strictly increasing function, it has only one maximum. We usually want a joint likelihood, which is the likelihood for $$x_1, x_2, ... , x_n$$ given $\mu$ and $\sigma$. 
+
+If you do the derivations and set them to zero, it can be shown that:
+$$
+\begin{aligned}
+  \hat{\mu} &= \frac{\sum^n_{i = 1}x_i}{n} \\
+  \hat{\sigma}^2 &= \frac{\sum^n_{i=1}(x_i-\hat\mu)^2}{n}
+\end{aligned}
+$$
+Which should look familiar. In the case of the normal distribution $\mu$ is called the mean and $\sigma^2$ is called the variance. One thing to note, but not go into details on is that to obtain an unbiased variance, we need to subtract n with 1. This is called Bessels Correction and leads to an unbiased estimate of $\sigma^2$. The mean and variance are easily obtained using the `mean()` and `var()` function. Lets suppose we observe 3 samples from $X$ $x_1 = 2, x_2 = 1.5, x_3 = 2.7$.
+```{r}
+X <- c(2,1.5,2.7)
+n <- length(X)
+m <- sum(X)/n
+c(m, mean(X))
+
+s <- sum((X-m)^2)/(n-1)
+c(s,var(X))
+
+
+
+```
+
+
+
+
+
+
+
