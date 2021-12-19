@@ -5,6 +5,10 @@ date: "19/12/2021"
 output: html_document
 ---
 
+
+**Gradient descent below**
+
+generate random data.
 ```{r}
 set.seed(6164900)
 Y <- rnorm(100, 0, 3)
@@ -20,6 +24,7 @@ $$
   \frac{\partial f(\beta_n|Y,X)}{\partial\beta_j} &= -2*\frac{\sum^n_{i=1}x_{ij}*(y_i - \beta_0+\boldsymbol{\beta} \boldsymbol{X}_{i})} {n} \\
 \end{align}
 $$
+
 ```{r}
 GD_Multi <- function(Y, x, l_rate = 1E-3, thresh = 1, maxit = 5000){
   
@@ -39,16 +44,11 @@ GD_Multi <- function(Y, x, l_rate = 1E-3, thresh = 1, maxit = 5000){
   Dbs <- matrix(NA, maxit, nx+1)                        #set matrix for derivatives
   
   while(MSE > thresh){
-      Dbs[iter, 1] <- -2*mean(res) #derivative w.r.t b0
+    
+      Dbs[iter, 1] <- -2*mean(res)          #derivative w.r.t b0
       for(i in 2:(nx+1)){                   #derivative w.r.t weights
         Dbs[iter, i] <- -2* mean(x[, (i-1)]*res)
       }
-
-      #this is the same as above.
-       # Dbs[iter,1] <- (2/n) * sum(-(res))
-       # for(i in 2:(nx+1)){                   
-       #   Dbs[iter, i] <- (2/n) * sum(-x[,i-1]*res)
-       # }
       
       weights[(iter+1),1] <- weights[iter,1] - l_rate*Dbs[iter,1] #update intercept
       weights[(iter+1),2:(nx+1)] <- weights[iter,2:(nx+1)] - l_rate*Dbs[iter, 2:(nx+1)] #update regression coefficient
@@ -58,8 +58,7 @@ GD_Multi <- function(Y, x, l_rate = 1E-3, thresh = 1, maxit = 5000){
       res <- Y-y_pred
       MSE <- mean((res)^2) #update MSE
       
-      
-      iter <- iter + 1 #count iterations up
+      iter <- iter + 1     #count iterations up
 
       if(MSE == Inf | MSE == -Inf){
         stop('No convergence, try a smaller learning rate such as dividing the current learning rate by 10')

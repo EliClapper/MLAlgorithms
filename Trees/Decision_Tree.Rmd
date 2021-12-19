@@ -1,0 +1,12 @@
+
+
+
+```{r}
+set.seed(6164900)
+Y <- rep(1:2, each = 50)
+X <- c(rnorm(50, 0.5, 2), rnorm(50))
+```
+Gini index is the cost function in classification trees. It is a measure of purity that calculates how well a certain split correctly classifies cases.
+perfect seperation results in Gini = 0, which means we would correctly classify every case.
+If we would not do better than chance, so a 50/50 split (given there are 2 groups with equal lengths of 50 cases each), then Gini = 0.5.
+

@@ -1,0 +1,12 @@
+---
+title: "Multi Normal PDF"
+author: "Eli Clapper"
+date: "19/12/2021"
+output: html_document
+---
+
+The Multivariate normal probability density function is defined as
+$$
+ f(\boldsymbol{x}) = \frac{1}{\sqrt{(2\pi)^{\frac{n}{2}}|\Sigma|^{1/2}}}e^{-\frac{1}{2}(x-\mu)'\Sigma^{-1}(x-\mu)}
+$$
+where $\boldsymbol{x}$ is a matrix of random variables, $\Sigma$ is covariance matrix of $\boldsymbol{x}$, and $\boldsymbol{\mu}$ is the vector of means for the random variables.
