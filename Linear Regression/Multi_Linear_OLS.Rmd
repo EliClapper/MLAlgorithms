@@ -13,7 +13,7 @@ X <- cbind(Y+rnorm(100, 100, 15), Y + rnorm(100, 100, 20))
 
 Make function
 ```{r}
-source("../Used_Functions.R") # load in function metrics().
+source("../Created_Functions.R") # load in function metrics().
 
 OLS <- function(y, x){
   n <- length(y)         #number of observations

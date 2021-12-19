@@ -13,7 +13,15 @@ X <- Y + rnorm(100, 100, 15)
 
 Another way of finding $b_0$ and $b_1$ is to use a gradient descent algorithm.
 This implies we need the gradient of the RSS which are the derivatives of the RSS with respect to $b_0$ and $b_1$.
-Where this gradient is lowest, the error is minimized. It is an iterative method where we continually put in different values for $b_0$ and $b_1$ until we find the lowest value we can find. These new values do depend on old values so that the algorithm can converge. We can simultaneously define the learning rate. This value determines how much we learn from our previous iterations of the wanted parameters. A small learning rates takes longer, but we are more sure to find a fitting solution. A Big learning rate takes short, but does not necessarily get to the minimum. 
+Where this gradient is lowest, the error is minimized. This concept is explained in `Maximum_Likelihood.Rmd`. Gradient Ascent/Descent is an iterative method where we continually put in different values for $b_0$ and $b_1$ until we find the lowest value we can find. This concept is explained in `ML_Gradient_Ascent.Rmd`
+
+So I just provide the derivatives here for simple linear regression and create the algorithm.
+$$
+\begin{align}
+  \frac{\partial f(\beta_n|Y,X)}{\partial\beta_0} &= -2*\frac{\sum^n_{i=1}(y_i - \beta_0+\beta_1x_i)} {n} \\
+  \frac{\partial f(\beta_n|Y,X)}{\partial\beta_1} &= -2*\frac{\sum^n_{i=1}x_i*(y_i - \beta_0+\beta_1 x_i)} {n} \\
+\end{align}
+$$
 
 the function below produces same stimate for b1 as `lm()`, but intercept seems random
 ```{r}
