@@ -49,7 +49,7 @@ $$
   \hat{\sigma}^2 &= \frac{\sum^n_{i=1}(x_i-\hat\mu)^2}{n}
 \end{aligned}
 $$
-Which should look familiar. In the case of the normal distribution $\mu$ is called the mean and $\sigma^2$ is called the variance. One thing to note, but not go into details on is that to obtain an unbiased variance, we need to subtract n with 1. This is called Bessels Correction and leads to an unbiased estimate of $\sigma^2$. The mean and variance are easily obtained using the `mean()` and `var()` function. Lets suppose we observe 3 samples from $X$ $x_1 = 2, x_2 = 1.5, x_3 = 2.7$.
+Which should look familiar. In the case of the normal distribution $\mu$ is called the mean and $\sigma^2$ is called the variance. One thing to note, but not go into details on, is that to obtain an unbiased variance, we need to subtract $n$ with 1. This is called Bessels Correction and leads to an unbiased estimate of $\sigma^2$. The mean and variance are easily obtained using the `mean()` and `var()` function. Lets suppose we observe 3 samples from $X$ $x_1 = 2, x_2 = 1.5, x_3 = 2.7$.
 ```{r}
 X <- c(2,1.5,2.7)
 n <- length(X)

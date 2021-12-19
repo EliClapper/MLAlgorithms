@@ -1,0 +1,70 @@
+---
+title: "Multi-linear Gradient Descent"
+author: "Eli Clapper"
+date: "19/12/2021"
+output: html_document
+---
+
+```{r}
+set.seed(6164900)
+Y <- rnorm(100, 0, 3)
+X <- cbind(replicate(3, rnorm(100)))
+```
+
+
+The function below does not work yet, B's do not converge. In some cases, it keeps ascending or descending or sometimes the traceplots show a parabola, depending on values for input matrix X. I think it is because line 33, where the derivatives w.r.t a certain parameter are caculated. **They do not take the multivariate structure into account yet**
+```{r}
+GD_Multi <- function(Y, x, l_rate = 1E-6, thresh = 1, maxit = 5000){
+  
+  nx <- ifelse(is.null(ncol(x)), length(x), ncol(x))    #number of predictors
+  
+  weights <- matrix(NA, maxit, nx+1)                    #create memory for the weights
+  colnames(weights) <- c("b0", sprintf('b%d', 1:nx))    #give names
+  weights[1,] <- replicate(nx+1, runif(1))              #set initial values
+
+  y_pred <- weights[1,1] + rowSums(t(t(x)*weights[1,2:(nx+1)])) #calculate fitted values using initial weights
+  MSE <- mean((Y-y_pred)^2)                             #set initial MSE with random values
+  iter <- 1                                             #set counter
+  
+  Dbs <- matrix(NA, maxit, nx+1)                        #set matrix for derivatives
+  
+  while(MSE > thresh){
+      Dbs[iter, 1] <- mean(-2*(Y - y_pred)) #derivative w.r.t b0
+      for(i in 2:(nx+1)){                   #This does not keep multivariate structure into account!
+        Dbs[iter, i] <- mean(-2*x[, (i-1)]*(Y - y_pred))
+      }
+      
+      #Db1 <- mean(-2*X*(Y - y_pred)) #derivative w.r.t b1
+
+      weights[(iter+1),1] <- weights[iter,1] - l_rate*Dbs[iter,1] #update intercept
+      weights[(iter+1),2:(nx+1)] <- weights[iter,2:(nx+1)] - l_rate*Dbs[iter, 2:(nx+1)] #update regression coefficient
+      
+      y_pred <- weights[iter,1] + rowSums(t(t(x)*weights[iter,2:(nx+1)])) #update predicted values
+      MSE <- mean((Y-y_pred)^2) #update MSE
+      iter <- iter + 1 #count iterations up
+
+      if(MSE == Inf | MSE == -Inf){
+        stop('No convergence, try a smaller learning rate such as dividing the current learning rate by 10')
+      }
+      
+      if(iter == maxit){
+        print('max iteration reached')
+        return(weights)
+      }
+   }
+  print('solution found')
+  return(weights)
+
+}
+
+tt <- GD_Multi(Y,X, maxit = 10000, l_rate = 1E-4)
+
+```
+
+```{r}
+apply(na.omit(tt), 2, mean)
+
+plot(tt[,3], type = 'l')
+lm(Y~X)
+```
+

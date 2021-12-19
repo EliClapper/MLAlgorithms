@@ -15,7 +15,7 @@ Another way of finding $b_0$ and $b_1$ is to use a gradient descent algorithm.
 This implies we need the gradient of the RSS which are the derivatives of the RSS with respect to $b_0$ and $b_1$.
 Where this gradient is lowest, the error is minimized. It is an iterative method where we continually put in different values for $b_0$ and $b_1$ until we find the lowest value we can find. These new values do depend on old values so that the algorithm can converge. We can simultaneously define the learning rate. This value determines how much we learn from our previous iterations of the wanted parameters. A small learning rates takes longer, but we are more sure to find a fitting solution. A Big learning rate takes short, but does not necessarily get to the minimum. 
 
-the function below works, but for some reason
+the function below produces same stimate for b1 as `lm()`, but intercept seems random
 ```{r}
 GradientDescent <- function(Y, X, l_rate = 1E-6, thresh = 10, max_iter = 10000){
   plot(X,Y)
@@ -53,5 +53,6 @@ GradientDescent <- function(Y, X, l_rate = 1E-6, thresh = 10, max_iter = 10000){
 }
 
 GradientDescent(Y,X)
+lm(Y~X)
 
 ```
