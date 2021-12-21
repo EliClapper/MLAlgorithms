@@ -3,10 +3,61 @@
 
 ```{r}
 set.seed(6164900)
-Y <- rep(1:2, each = 50)
-X <- c(rnorm(50, 0.5, 2), rnorm(50))
+Y <- rnorm(100)
+X <- cbind(Y + rnorm(100, 0 , 1.5), rnorm(100))
 ```
+In regression, a decision tree assigns to every observation a mean outcome conditional on some value in the predictor space. Does not have to be mean, can also be median or anything else.
+
+```{r}
+plot(X[,1], X[,2])
+```
+
+you can divide this plot up into maximally N regions, where N is the number of cases in the dataset. Every region can be seen as a terminal node, every observation in that region is assigned the mean/median of the outcome conditional on the predictor space of that region. So E(Y|X = Region).
+
+We could for example define 2 regions in the predictor space, for example like this:
+```{r}
+plot(X[,1], X[,2])
+abline(v = mean(X[,1]), col = 'red')
+```
+
+Then, every observation on the left region gets the mean of the outcome conditional on the left region, and everyone on the right gets the mean of the outcome belonging to the left region. Note that this Regional subset is only dependent on X[,1] and so we get two 
+
+```{r}
+df <- cbind(Y,X)
+dfR1 <- df[df[,2] < mean(df[,2]),]
+dfR2 <- df[df[,2] > mean(df[,2]),]
+
+mR1 <- mean(dfR1)
+mR2 <- mean(dfR2)
+
+```
+
+
+we want to find regions that minimize:
+$$
+\sum^J_{j=1}\sum_{i\in R_j}^{N_{R_{j}}}(y_i - \bar{y}_{R_{j}})^2
+$$
+so we take the squared deviations of every case within their respective subset and try to minimize that.
+like so:
+```{r}
+sum((dfR1[,1]-mR1)^2)
+sum((dfR2[,1]-mR2)^2)
+
+```
+
+
 Gini index is the cost function in classification trees. It is a measure of purity that calculates how well a certain split correctly classifies cases.
 perfect seperation results in Gini = 0, which means we would correctly classify every case.
 If we would not do better than chance, so a 50/50 split (given there are 2 groups with equal lengths of 50 cases each), then Gini = 0.5.
+
+```{r}
+testsplit <- function(outcome, predictor, df){
+  belowmean <- abovemean <- c()
+  apply(df, 1, function(i){
+    
+  })
+}
+
+testsplit("Y", "Age", df)
+```
 
