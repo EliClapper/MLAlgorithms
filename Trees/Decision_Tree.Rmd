@@ -2,48 +2,131 @@
 
 
 ```{r}
-set.seed(6164900)
+set.seed(22)
 Y <- rnorm(100)
-X <- cbind(Y + rnorm(100, 0 , 1.5), rnorm(100))
+X <- cbind(Y + rnorm(100,0, 1.5), rnorm(100))
+df <- cbind(Y,X)
 ```
-In regression, a decision tree assigns to every observation a mean outcome conditional on some value in the predictor space. Does not have to be mean, can also be median or anything else.
+Very easily said, in regression, a decision tree assigns to every observation a mean outcome conditional on some value in the predictor space. 
 
 ```{r}
 plot(X[,1], X[,2])
 ```
 
-you can divide this plot up into maximally N regions, where N is the number of cases in the dataset. Every region can be seen as a terminal node, every observation in that region is assigned the mean/median of the outcome conditional on the predictor space of that region. So E(Y|X = Region).
+you can divide this plot up into minimally 1 and maximally N regions, where N is the number of cases in the dataset. Every observation in that region is assigned the mean/median (or other metrics) of the outcome conditional on the predictor space of that region. So $\hat{y}_i = E(Y|X = Region)$. 
+For example, one arbitrary, way of splitting the regions would be like this:
 
-We could for example define 2 regions in the predictor space, for example like this:
+```{r}
+plot(X[,1], X[,2])
+abline(v = -2, col = 'red')
+lines(-2:7, rep(-0.5, 10), col = 'blue')
+text(c(-3.5,2,2), c(0,1, -1.5), sprintf("R%d", 1:3), col = "brown")
+
+```
+
+Where every case in a region would get a predicted value that is the mean of the outcome variable in that specific region so $E(y_i | X = R_j)$. We can essentially determine which split gives us the best prediction in the outcome variable. We do so by finding regions that minimize:
+
+$$
+RSS = \sum^J_{j=1}\sum_{i\in R_j}^{N_{R_{j}}}(y_i - \bar{y}_{R_{j}})^2
+$$
+
+So we take the squared deviations of every case within their respective subset with their respective means and try to minimize that sum. However, how to specify the regions is rather arbitrary, and since the predictors are continuous and have theoretically an infinite amount of points to split on, we usually use `Recursive Binary Splitting`. This is an approach where we split the data based on some value for each of the predictors. usually their means. Then we check, for every split, how much the RSS decreases compared to the RSS where we would only use 1 region, which is just the entire data set. The variable that splits the data best, so reducing RSS most, will be used on top of the tree. When the dataset is split, we do this again on each split dataset, until the RSS is as small as we want. This means that with 100 cases, the dataset might be split into 2 with each having 50 cases. Than we split those 2 datasets again so that we might have 4 datasets with 23, 27, 22, 28 cases etc.
+
+Let's take a look at an example of binary recursive splitting where we have 2 predictors. In the case of 2 predictors we would define 4 regions in the predictor space based on, for example, the mean of each of the predictor. Like so:
 ```{r}
 plot(X[,1], X[,2])
 abline(v = mean(X[,1]), col = 'red')
+abline(h = mean(X[,2]), col = 'blue')
+text(c(-3,4,-3,4), c(1,1,-1,-1), sprintf("R%d", 1:4), col = "brown")
+
+
 ```
 
-Then, every observation on the left region gets the mean of the outcome conditional on the left region, and everyone on the right gets the mean of the outcome belonging to the left region. Note that this Regional subset is only dependent on X[,1] and so we get two 
+For example, every observation in the left region (R1 + R3) gets the mean of the outcome conditional on the left region, and everyone on the right (R2 + R4) gets the mean of the outcome belonging to the left region. Same for up and down. Note that the left-right division is the split based on X1 and up-down is based on X2.
 
+So let us check which mean split gives us the lowest RSS.
 ```{r}
-df <- cbind(Y,X)
-dfR1 <- df[df[,2] < mean(df[,2]),]
-dfR2 <- df[df[,2] > mean(df[,2]),]
 
-mR1 <- mean(dfR1)
-mR2 <- mean(dfR2)
+dfR13a <- df[df[,2] < mean(df[,2]), ] #splits on X1
+dfR13b <- df[df[,2] > mean(df[,2]), ]
+
+dfR24a <- df[df[,3] < mean(df[,3]), ] #splits on X2
+dfR24b <- df[df[,3] > mean(df[,3]), ]
+
+RSSX1 <- mean(c(
+  sum((dfR13a[,1]-mean(dfR13a[,1]))^2), 
+  sum((dfR13b[,1]-mean(dfR13b[,1]))^2))) #RSS_X1 
+RSSX2 <- mean(c(
+  sum((dfR24a[,1]-mean(dfR24a[,1]))^2), 
+  sum((dfR24b[,1]-mean(dfR24b[,1]))^2))) #RSS_X2
+
+c(RSSX1, RSSX2)
 
 ```
-
-
-we want to find regions that minimize:
-$$
-\sum^J_{j=1}\sum_{i\in R_j}^{N_{R_{j}}}(y_i - \bar{y}_{R_{j}})^2
-$$
-so we take the squared deviations of every case within their respective subset and try to minimize that.
-like so:
+And we can see that the split based on the mean of X1 gives a lower RSS and thus is a better predictor of Y then X2.
+Lets check how much it does better than when we just assign everyone the mean outcome value of the entire dataset, called the null model.
 ```{r}
-sum((dfR1[,1]-mR1)^2)
-sum((dfR2[,1]-mR2)^2)
+RSS0 <- sum((df[,1] - mean(df[,1]))^2)
+RSS0 - RSSX1 #RSS decreases with 57.2 units if we split on X1
+(RSSX1-RSS0)/RSS0 * 100 #59.5% decrease
 
 ```
+We see that the RSS decreases with 59.5% if would we split the dataset based on the mean of X1 than if we dont split the dataset at all. Everyone on the lower end of X1 gets a predicted value of $\hat{y}_i = E(Y| X1 < \mu_{X1})$, and everyone on the higher end of X1 gets a predicted value of $\hat{y}_i = E(Y| X1 > \mu_{X1})$. And this would do better than if everyone got $\hat{y}_i = E(Y)$
+
+But with decision trees we usually do not stop after the split of a single variable. We now decided to split on the mean of X1 and so we essentially have 2 dataframes. We could then check if we could split these even further to obtain a lower RSS than the RSS we obtained when we split on X1.
+
+When do we stop? We could put every case in their own region and have perfect predictions (0 bias), but the tree would than not predict new data well(too much variance). Usually we we build an entire tree and stop when there are minimally $n_{min}$ observations in every region. This usually still leads to overfitting, so finally we can 'prune' the tree. We could for example cut the tree up until a point where we are happy with the drop in RSS.
+
+Time to code a tree!
+
+First we define a function that splits a dataset on the means of each predictor and returns the best split. It also returns, for the splits that define the best split, how much the RSS has decreased in percentages compared to the RSS in the previous split. Additionally, it returns the predictor that provided the best split
+```{r}
+
+#note that this function takes a df where continuous outcome variable is in column 1
+RSS_old <- sum((df[,1] - mean(df[,1]))^2) #initial RSS
+best_split <- function(df, RSS_old){
+  
+  # Create list of 2*p datasets, for each predictor one datset for above its mean and one below its mean
+  splits <- lapply(2:(ncol(df)), function(x){
+    list(dfa = df[df[,(x)] < mean(df[,(x)]), ],
+         dfb = df[df[,(x)] > mean(df[,(x)]), ])
+    })
+  
+  # Calculate the mean RSS for each of those p splits. so mean over RSS_a RSS_b
+  RSS <- unlist(lapply(splits, function(x){
+    sapply(x, function(y){
+      sum((y[,1]-mean(y[,1]))^2)
+    })
+  }))
+  
+  #obtain meanRSS for both dataset below and above
+  seque <- seq(1, ((ncol(df)-1)*2), 2) #for i in 1,3,5.. etc.. 
+  meanRSS <- sapply(seque, function(i){ 
+    mean(RSS[i:(i+1)]) #obtain meanRSS for both dataset below and above
+    }) 
+  
+  best_var <- which(meanRSS == min(meanRSS)) #determine which predictor had best split
+  
+  RSS_bestvar <- RSS[seque[best_var]:(seque[best_var]+1)] #obtain RSS of both datasets that define the best split
+  
+  perc_dec <- (1-(RSS_bestvar/RSS_old)) * 100 #Decrease of RSS in percentage for both splits
+  
+  criterium <- paste0("X", best_var, " < ", formatC(mean(df[,(best_var+1)]), 2))
+
+  return(list(splits = splits[[index_RSS_low]], perc_dec = perc_dec, RSS = RSS_bestvar, criterium = criterium)) #return the best split
+}
+
+out <- best_split(df, RSS_old)
+out$criterium
+
+```
+
+
+
+
+
+
+
 
 
 Gini index is the cost function in classification trees. It is a measure of purity that calculates how well a certain split correctly classifies cases.
