@@ -1,0 +1,143 @@
+In regression, K-Nearest Neighbours is an algorithm where the predicted value of a case is some value that characterizes the nearest K neighbours of that case. For example, we assign the mean of the nearest three cases to the candidate case that those three points are the nearest too.
+
+Let's illustrate in a graphical example.
+
+Generate data with outcome and 2-dimensional input matrix
+```{r}
+set.seed(6164900)
+Y <- rnorm(100)
+X <- scale(cbind(Y + rnorm(100,0, 1.5), rnorm(100)))
+df <- cbind(Y,X)
+```
+
+Plot the input data
+```{r}
+library(plotrix)
+plot(X[,1], X[,2], col = "blue", main = "KNN with K = 3")
+points(-2.1,1, col = "red")
+draw.circle(-2.1,1,0.75, col = rgb(red = 1, blue = 0, green = 1, alpha = 0.3))
+```
+The predicted value on the outcome for the red dot depends on the three dots that closest to it. One metric that can be used is the mean on the outcome for these three blue dots. That mean will be the predicted value for the red dot. There are other metrics that can be used, such as the median, but in this example the mean is used.
+
+There are also multiple measures that describe the 'distance' to the determine the closest neighbours. The distance between two vectors that is mostly use is the Eucledian distance, which is will be used in this example and is defined as follows:
+$$
+\sqrt{\sum^n_{i=1}(C_i - N_i)^2}.
+$$
+Where n = the number of predictors a case is observed on, C = the candidate vector and N is a neighbour vector.
+We want to find the neighbours for which the root of the squared difference between vectors of the neighbour and the candidate is smallest. 
+
+So a function that calculates Euclidean distance may look like this:
+```{r}
+EDist <- function(C,N){ #function to calculate Eucledian distance between vectors
+  sqrt(sum((C-N)^2))
+}
+
+case <- df[1, 2:ncol(df)] #sample case (first case of df in this example)
+df_wo_case <- df[-1, ] #df without the case
+
+EDist(case, df_wo_case[1, 2:ncol(df)]) #euclidean distance of candidate and potential neighbour
+```
+Now we can calculate Euclidean Distances for two cases, we can try to do it for the first case with all other cases in the data set. For 1 case, we get n-1 Euclidean Distances.
+
+```{r}
+#obtain EDs for case vs all possible neighbours
+EDs1 <- sapply(1:nrow(df_wo_case), function(i){
+  EDist(case, df_wo_case[i, 2:ncol(df)])
+}) 
+EDs1
+```
+Now we want to know the K neighbours that have the lowest Eucledian distances and take the mean over their values on the outcome variable. That would be the predicted value for the candidate. 
+
+Now lets see do a program a KNN for the first case in the data set and see how well we predict with 3 different values of K (1, 10, 80).
+```{r}
+predcase1 <- function(K){
+  
+  #obtain values of lowest K EDs
+  lowest <- sort(EDs1)[1:K] 
+
+  #index of neighbours with lowest EDs
+  neighbours <- sapply(1:length(lowest), function(i){
+    which(EDs1 == lowest[i])
+  }) 
+  
+  #the outcome values for the 3 nearest neighbours
+  Neighbours <- df_wo_case[neighbours, 1] 
+  
+  #predicted value for case 1
+  pred_case1 <- mean(Neighbours) 
+
+  return(pred_case1)
+}
+
+#plot predicted value against the actual value in the density of Y
+for(i in c(1, 10, 80)){
+  thispred <- predcase1(i)
+  plot(density(Y), main = paste0("K = ", i))
+  points(c(df[1,1], thispred), c(0.2, 0.2), col = "red")
+  text(c(df[1,1]-0.4, thispred+0.55), c(0.2, 0.2), c('actual','predicted'))
+}
+
+
+
+
+```
+We plot the predicted and actual values on the density of Y to get an idea how many standard deviations the predicted value is away from the actual. You can see that the predicted value gets better as K gets smaller. It could be argued that this is expected as it is likely that similar cases in the input data also have similar values on the outcome value. However, if we choose very small values of K, than there are very little neighbours, which makes the variance of the algorithm way bigger. A too big K however, might have little variance, but will have large bias. The best value for K is usually chosen using cross-validation. Also, with low values for K, the predicted value is based on very little data, which also could, instead of improving, worse the fit.
+
+So now lets code a KNN for the entire dataframe and obtain predicted values and see how our function does for different values of K. We evaluate the algorithm by using certain ML metrics such as $RMSE$, $MAD$ and $R^2$.
+The function does require the outcome variable to be the first column of the matrix.
+
+```{r}
+KNN <- function(df, K){
+  
+  #function to calculate Eucledian distance between vectors
+  EDist <- function(C,N){ 
+    sqrt(sum((C-N)^2))
+  }
+  
+  #function that obtains KNN estimate for a single case in the df
+  predict1 <- function(i){
+    case <- df[i, 2:ncol(df)] #sample case (first case of df in this example)
+    df_wo_case <- df[-i, ] #df without the case
+    EDs <- sapply(1:nrow(df_wo_case), function(i){ #obtain
+      EDist(case, df_wo_case[i, 2:ncol(df)])
+    })
+    lowest <- sort(EDs)[1:K] #obtain values of lowest K EDs
+    
+    neighbours <- sapply(1:K, function(i){
+        which(EDs == lowest[i])
+      }) #which neighbours have lowest EDs
+      
+      pred_case <- mean(df_wo_case[neighbours, 1]) #predicted value for a case
+    
+      return(pred_case)
+  }
+  
+  #apply that function over all cases to obtain estimates
+  y_pred <- sapply(1:nrow(df), function(x){
+    predict1(x)
+  })
+  
+  return(y_pred)
+}
+
+```
+
+Now lets obtain metrics with the metrics function using K = 1, 10, 80, 99
+```{r}
+source("../Created_Functions.R")
+eval <- lapply(c(1,10,80, 99), function(i){
+  pred <- KNN(df, i)
+  print(var(pred))
+  metrics(Y, pred)
+})
+```
+you can see that the variance gets lower the more cases we use as neighbours, with it being almost zero as K = nrow(df)-1.
+
+```{r}
+names(eval) <- c("k=1", "k=10", "k=80", "k=99")
+eval
+```
+For k = 1 and k = 99, $R^2$ is negative, indicating that just using the mean of the outcome value as a predicted value for all cases is a better option than the KNN model. In this case it seems like k = 10 does best. But it is advised to do cross-validation for more valid results.
+
+
+
