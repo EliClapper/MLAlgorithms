@@ -8,6 +8,7 @@ X <- Y + rnorm(100, 0, 3)
 ```
 
 ```{r}
+source("../Created_Functions.R")
 ols <- OLS(Y, X) #retrieved from Linear_model.Rmd
 plot(X,Y) # someone with score 0 on X
 abline(ols$intercept, ols$weights)

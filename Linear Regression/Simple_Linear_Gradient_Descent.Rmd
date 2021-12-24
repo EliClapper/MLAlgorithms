@@ -7,8 +7,8 @@ output: html_document
 
 ```{r}
 set.seed(6164900)
-Y <- rnorm(100, 100, 15)
-X <- Y + rnorm(100, 100, 15)
+Y <- rnorm(500, 100, 15)
+X <- Y + rnorm(500, 100, 15)
 ```
 
 Another way of finding $b_0$ and $b_1$ is to use a gradient descent algorithm.
@@ -26,7 +26,6 @@ $$
 the function below produces same stimate for b1 as `lm()`, but intercept seems random
 ```{r}
 GradientDescent <- function(Y, X, l_rate = 1E-6, thresh = 10, max_iter = 10000){
-  plot(X,Y)
   b0 <- runif(1) #set initial values
   b1 <- runif(1) #set initial values
   y_pred <- b0 + b1*X
@@ -50,17 +49,54 @@ GradientDescent <- function(Y, X, l_rate = 1E-6, thresh = 10, max_iter = 10000){
       
       if(iter == max_iter){
         print('max iteration reached')
-        abline(b0,b1)
         return(c(b0,b1))
       }
    }
   print('solution found:')
-  abline(b0,b1)
   return(c(b0,b1))
 
 }
 
-GradientDescent(Y,X)
-lm(Y~X)
+```
+
+Let's see how the line fits if we use the function
+```{r}
+estimates <- GradientDescent(Y,X)
+plot(X,Y)
+abline(estimates[1], estimates[2])
+```
+Seems like a pretty good fit.
+
+Let see how the hold up against the `lm` function
+```{r}
+estimates
+coef(lm(Y~X))
+```
+The coefficient for the predictor, the slope, is very similar. The intercept is different, but this does not matter, because the point where X crosses Y is very far away and variation in the intercept does not affect the final regression line alot.
+
+#evaluate using cross-validation
+```{r}
+set.seed(6164900)
+split <- sample(1:length(X), size = floor(length(X)*0.8)) #80% of observed variables in X will be used as training data
+
+#input matrices 
+train_input <- X[split]
+test_input <- X[-split]
+
+#outcome vectors
+train_outcome <- Y[split]
+test_outcome <- Y[-split]
+
+#estimate parameters on training data
+n <- length(train_outcome)
+estimates <- GradientDescent(train_outcome, train_input)
+
+#apply parameter estimates on test input.
+y_pred_test <- estimates[1] + estimates[2]*test_input
+
+#obtain metrics
+source("../Created_Functions.R")
+metrics(test_outcome, y_pred_test)
 
 ```
+

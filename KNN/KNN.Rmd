@@ -8,6 +8,7 @@ set.seed(6164900)
 Y <- rnorm(100)
 X <- scale(cbind(Y + rnorm(100,0, 1.5), rnorm(100)))
 df <- cbind(Y,X)
+
 ```
 
 Plot the input data

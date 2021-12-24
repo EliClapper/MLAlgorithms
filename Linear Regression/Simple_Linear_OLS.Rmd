@@ -12,11 +12,11 @@ $$\boldsymbol{Y} = b_0 + \boldsymbol{b}\boldsymbol{X} + \boldsymbol{\epsilon} $$
 
 where $\boldsymbol{Y}$ represents the vector of the outcome variable, $b_0$ is the intercept, $\boldsymbol{b}$ represents the vector of weights for each input variable in matrix $\boldsymbol{X}$ and $\boldsymbol{\epsilon}$ represents the distance between $\boldsymbol{Y}$ and the linear predictor which is: $b_0 + \boldsymbol{b}\boldsymbol{X}$.
 
-Suppose we have a sample of 100 cases of which we observed an outcome variable Y and 1 input variable X, both drawn from a normal distribution. The variables are systematically correlated in the sense that X = Y with a certain amount of noise added to each observation. Increasing the Standard Deviation for X would lower the relationship between X and Y. 
+Suppose we have a sample of 500 cases of which we observed an outcome variable Y and 1 input variable X, both drawn from a normal distribution. The variables are systematically correlated in the sense that X = Y with a certain amount of noise added to each observation. Increasing the Standard Deviation for X would lower the relationship between X and Y. 
 ```{r}
 set.seed(6164900)
-Y <- rnorm(100, 100, 15)
-X <- Y + rnorm(100, 100, 15)
+Y <- rnorm(500, 100, 15)
+X <- Y + rnorm(500, 100, 15)
 ```
 We need values for $b_0$ and $b_1$ so that $\epsilon$ is minimized. There are multiple methods to do this: Ordinary Least Squares, QR decomposition, Maximum likelihood estimation using Gradient Descent to name a few. We first consider one of the easiest methods: Ordinary Least Squares.
 
@@ -44,8 +44,8 @@ $$
 The OLS estimates would thus be:
 ```{r}
 n <- length(Y)
-b0 <- mean(Y) - b1*mean(X)
 b1 <- (n*sum(X*Y) - sum(X)*sum(Y)) / (n*sum(X^2) - sum(X)^2)
+b0 <- mean(Y) - b1*mean(X)
 c(b0,b1)
 ```
 Lets take a look at how well these estimates describe our data by plotting the line
@@ -59,7 +59,7 @@ $\hat{\boldsymbol{Y}} = b_0 + b_1\boldsymbol{X}$. We also define some metrics on
 ```{r}
 y_pred <- b0 + b1*X
 
-source('../Used_Functions.R')
+source('../Created_Functions.R')
 
 
 ```
@@ -75,34 +75,30 @@ metrics(Y, fit.lin$fitted.values)
 ```
 
 
-
-**below is not correct, this does not gives estimates for multivariate regression, but for simple linear when done for every variable in X separately. The intercept makes no sense** 
+#Performance using cross-validation
+Now we can split X and Y up in training and testing data. Then we estimate the parameters on the training data and use the parameters on the input matrix of the testing data to obtain estimates for the testing outcome. We finally will compare them to the observed test data outcome.
 ```{r}
-OLS <- function(outcome, input){
-  y <- outcome #y is outcome variable
-  x <- input #x is single input variable or matrix of input variables
-  n <- length(y) #number of cases
-  nx <- ifelse(is.null(ncol(x)), length(x), nrow(x)) #if x is vector length, if matrix nrow
-  
-  if(nx != n){
-    stop('length X is not of length Y')
-  }
-  
-  if(is.null(ncol(x))){ #if X is just an input vector we do this
-    weights <- b1 <- (n*sum(x*y) - sum(x)*sum(y)) / (n*sum(x^2) - sum(x)^2)
-    intercept <- mean(y) - weights * mean(x)
-  } else{ #if its a matrix we specifiy for loop
-    weights <- c()
-    for(i in 1:ncol(x)){
-      b_i <- (n*sum(x[,i]*y) - sum(x[,i])*sum(y)) / (n*sum(x[,i]^2) - sum(x[,i])^2)
-      weights <- append(weights, b_i)
-    }
-    intercept <- mean(y) - sum(weights*(colMeans(input)))
-  }
-  
-  ypred <- intercept + rowSums(t(t(input)*weights))
-  metricz <- metrics(y, ypred)
-  return(list(weights = weights, predictions = ypred, metrics = metricz, intercept = intercept))
-}
+set.seed(6164900)
+split <- sample(1:length(X), size = floor(length(X)*0.8)) #80% of observed variables in X will be used as training data
+
+#input matrices 
+train_input <- X[split]
+test_input <- X[-split]
+
+#outcome vectors
+train_outcome <- Y[split]
+test_outcome <- Y[-split]
+
+#estimate parameters on training data
+n <- length(train_outcome)
+b1 <- (n*sum(train_input*train_outcome) - sum(train_input)*sum(train_outcome)) / 
+  (n*sum(train_input^2) - sum(train_input)^2)
+b0 <- mean(train_outcome) - b1*mean(train_input)
+
+#apply parameter estimates on test input.
+y_pred_test <- b0 + b1*test_input
+
+#obtain metrics
+metrics(test_outcome, y_pred_test)
 
 ```
