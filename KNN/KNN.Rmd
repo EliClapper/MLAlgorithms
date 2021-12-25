@@ -38,13 +38,14 @@ df_wo_case <- df[-1, ] #df without the case
 
 EDist(case, df_wo_case[1, 2:ncol(df)]) #euclidean distance of candidate and potential neighbour
 ```
-Now we can calculate Euclidean Distances for two cases, we can try to do it for the first case with all other cases in the data set. For 1 case, we get n-1 Euclidean Distances.
+Now that we can calculate Euclidean Distances for two cases, we can try to do it for the first case with all other cases in the data set. For 1 case, we get n-1 Euclidean Distances.
 
 ```{r}
 #obtain EDs for case vs all possible neighbours
 EDs1 <- sapply(1:nrow(df_wo_case), function(i){
   EDist(case, df_wo_case[i, 2:ncol(df)])
-}) 
+})
+length(EDs1)
 EDs1
 ```
 Now we want to know the K neighbours that have the lowest Eucledian distances and take the mean over their values on the outcome variable. That would be the predicted value for the candidate. 
@@ -85,7 +86,7 @@ for(i in c(1, 10, 80)){
 We plot the predicted and actual values on the density of Y to get an idea how many standard deviations the predicted value is away from the actual. You can see that the predicted value gets better as K gets smaller. It could be argued that this is expected as it is likely that similar cases in the input data also have similar values on the outcome value. However, if we choose very small values of K, than there are very little neighbours, which makes the variance of the algorithm way bigger. A too big K however, might have little variance, but will have large bias. The best value for K is usually chosen using cross-validation. Also, with low values for K, the predicted value is based on very little data, which also could, instead of improving, worse the fit.
 
 So now lets code a KNN for the entire dataframe and obtain predicted values and see how our function does for different values of K. We evaluate the algorithm by using certain ML metrics such as $RMSE$, $MAD$ and $R^2$.
-The function does require the outcome variable to be the first column of the matrix.
+The function does require the outcome variable to be the first column of the matrix. Afterwards we wiill evaluate the algorithm on a separate testing and training set.
 
 ```{r}
 KNN <- function(df, K){
@@ -140,5 +141,66 @@ eval
 ```
 For k = 1 and k = 99, $R^2$ is negative, indicating that just using the mean of the outcome value as a predicted value for all cases is a better option than the KNN model. In this case it seems like k = 10 does best. But it is advised to do cross-validation for more valid results.
 
+#evaluate using cross-validation
 
+We will know evaluate the algorithm using cross-validation with K = 100. It requires a bit of recoding, because the test and train data must be put in separately. Besides, for the test data, only the input is required to obtain estimates we can compare the observed scores too.
 
+generate data
+```{r}
+set.seed(6164900)
+Y <- rnorm(500)
+X <- cbind(Y+rnorm(500, 0 , 1.2), rnorm(500))
+df <- cbind(Y, X)
+
+split <- sample(1:length(Y), size = floor(0.8*length(Y)))
+train <- df[split, ]
+test <- df[-split, ]
+test_input <- test[, 2:ncol(test)]
+
+```
+
+rewrite function
+```{r}
+KNN_CV <- function(train, test_input, K){
+  
+  ntest <- ifelse(is.null(ncol(test_input)), length(test_input), nrow(test_input)) #cases in testset
+  nptest <- ifelse(is.null(ncol(test_input)), 1, 0) #predictors in testset
+  
+  #function to calculate Eucledian distance between vectors
+  EDist <- function(C,N){ 
+    sqrt(sum((C-N)^2))
+  }
+  
+  #function that obtains KNN estimate for a single case in the df
+  predict1 <- function(i){
+    case <-ifelse(nptest == 1, test_input[i],test_input[i, ]) #sample case (first case of df in this example)
+    EDs <- sapply(1:nrow(train), function(i){ #obtain
+      EDist(case, train[i, 2:ncol(train)])
+    })
+    lowest <- sort(EDs)[1:K] #obtain values of lowest K EDs
+    
+    neighbours <- sapply(1:K, function(i){
+        which(EDs == lowest[i])
+      }) #which neighbours have lowest EDs
+      
+      pred_case <- mean(train[neighbours, 1]) #predicted value for a case
+    
+      return(pred_case)
+  }
+  
+  #apply that function over all cases to obtain estimates
+  y_pred <- sapply(1:ntest, function(x){
+    predict1(x)
+  })
+  
+  return(y_pred)
+}
+```
+
+run function, obtain estimates and compare
+```{r}
+estimates <- KNN_CV(train, test_input, 100)
+metrics(test[,1], estimates)
+
+```
+The algorithm does okay, but not terrific **probably has to do with how data is simulated**
