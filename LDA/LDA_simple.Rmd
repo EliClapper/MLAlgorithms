@@ -1,0 +1,153 @@
+---
+title: "LDA_simple"
+author: "Eli Clapper"
+date: "27-12-2021"
+output: html_document
+---
+
+In this `.Rmd` file a Linear Discriminant Analysis algorithm for when there is 1 continuous predictor is discussed.
+
+A widely used theorem used in probability theory is Bayes Theorem:
+$$
+  P(A|B) = \frac{P(B|A)*P(A)}{P(B)}
+$$
+The theorem states that the conditional probability of A given B is the quotient of the product of the conditional probability of B given A and the marginal probability of A with the marginal probability of B.
+
+In numerous classification problems we are interested in the conditional probability of an observation being in class $k$ given the predictor space $\boldsymbol{X}$. The theorem is then rewritten as:
+$$
+  P(Y = k| X = x) = \frac{f_k(x)*\pi_k}{\sum^K_{l=1}\pi_lf_l(x)}
+$$
+
+where $P(Y = k| X = x)$ is the posterior probability, $k$ is a certain class, $\pi_k$ is the overall/prior probability of being in class K, $f_k(x)$ is the probability density function [PDF] of $\boldsymbol{X}$ given class K and $\sum^K_{l=1}\pi_lf_l(x)}$ is the likelihood function which is the sum over the product of all class priors and PDFs.
+
+Where this probability is largest, we classify an observation.
+
+Let's put it more simply. Let us for now assume that we have only one predictor $\sim \mathcal{N}(\mu_x = 0, \sigma_x = 1)$ and an outcome that takes on 2 classes with every class containing 50% of the observations. If we had the entire population, then we could find the value of X that best divides the classes. Every case above that value would be put into class 1 the others in class 2. That is because cases in class 1 come from the same population as class 2 with the same marginal mean, but conditionally different means. For example, if we have 2 equally sized classes with the same variance, and $\mu_{1x} = -0.5$ and $\mu_{2x} = 0.5$, then $\mu_{x} = 0$. Let's plot to make it more clear. We draw for both groups 100 samples and plot their densities together and separate.
+
+```{r}
+set.seed(6164900)
+group1 <- rnorm(100, -0.5, 1)
+group2 <- rnorm(100, 0.5, 1)
+both <- c(group1, group2)
+c(mean(group1), mean(group2), mean(both)) #different means
+c(var(group1), var(group2), var(both)) #roughly same var
+
+d1 <- density(group1)
+d2 <- density(group2)
+db <- density(both)
+
+plot(d1, main="Density comparisons")
+polygon(d1, col = rgb(0,0,1,0.5), border="black")
+lines(d2)
+polygon(d2, col = rgb(1,0,0,0.5), border="black")
+lines(db)
+polygon(db, col = rgb(0,1,0,0.5), border="black")
+legend(-4, 0.4, fill = c("blue", "red", "green"), legend = c("group1", "group2", "combined"))
+
+abline(v = 0, lty = 2)
+```
+The cases in group 1 (the blue density) have a mean of -0.5, whereas the cases in group 2 (red) have a mean of 0.5. If we add both groups together we get a mean of zero. Because both also have the same variance (1) we would say that if for a case X > 0, the case belongs to group red, otherwise to group blue. This 0 is called the Bayes Decision Boundary. This is because the probability is highest of being in class 2 if X > 0. 
+
+In LDA and other classifiers we classify a case based on where $P(Y = k| X = x)$ is highest. It tries to mimick this bayesian decision boundary by calculating the probability of being in a specific class given a cases value on X. For each case we thus get K probabilities as calculated in equation 2. Where the probability is highest, we assign the case to.
+
+How do we obtain the parameters in equation 2? Some parameters are easily calculated. $\pi_k$ for example can be estimated in the sample by calculating the proportion of cases being in class $k$. Other parameters are a bit different, but lets first combine group 1 and group 2 data into a single matrix.
+```{r}
+Y <- rep(1:2, each = 100) #50% of cases in each class
+X <- both #normal distribution
+df <- cbind(Y,X)
+```
+
+In this particular example, both $\pi_1 = \pi_2 = 0.50$, because in both groups are 100 cases. In LDA, there are some strong assumptions. One is that the variance (or variance/covariance matrix when p > 2) of $\boldsymbol{X}$ is equal for all classes. Because X is normal for both classes it holds that: 
+$$
+f_k(x) = \frac{e^{-\frac{(X-\mu_k)^2}{2\sigma^2}}}{\sigma\sqrt{2\pi}}
+$$
+and so:
+$$
+  P(Y = k| X = x) = \frac{\frac{e^{-\frac{(X-\mu_k)^2}{2\sigma^2}}}{\sigma\sqrt{2\pi}}*\pi_k}{\sum^K_{l=1}\pi_l\frac{e^{-\frac{(X-\mu_l)^2}{2\sigma^2}}}{\sigma\sqrt{2\pi}}}
+$$
+If we take the log of this equation and rearrange terms we can show that we classify a case where:
+$$
+\delta_k(x) = x * \frac{\mu_k}{\sigma^2}- \frac{\mu^2_k}{2\sigma^2} * \log(\pi_k)
+$$
+is largest. $\delta_k(x)$ is called a discriminant function which is a linear function of x, hence the name LDA. 
+
+So suppose a case has $x = 1$, then we can almost calculate $\delta_k(x)$ and see in which class it is largest. To do so we just need estimates for $\sigma$ and all $\mu_k$. Which are as follows:
+
+$$
+\begin{align}
+\hat{\mu}_k &= \frac{\sum^{n_k}_{i=1}x_{ik}}{n_k} \\
+\hat{\sigma}^2 &= \frac{\sum^K_{k=1}\sum^N_{i=1}(x_{ik}-\mu_k)^2}{n-K}
+
+\end{align}
+$$
+which is the mean of each group and a weighted variance factor. So let us code a few function that calculate the estimate for the weighted variance and plug in x = 1 or x = -0.3 into the discriminant function to see where the case with $x = 1$ and $x = -0.3$ would be classified. We would expect the former to be classified in group 2 and the latter in group 1, because we already know that the Bayes Decision Boundary is close to or exactly 0.
+
+```{r}
+estimates <- function(df){
+  
+  K <- length(table(df[,1])) #number of groups
+  
+  groups <- list() #create memory
+  for(i in 1:K){ #save all groups into separate df
+    groups[[i]] <- df[df[,1] == i,]
+  }
+  
+  N <- sum(sapply(groups, function(x){nrow(x)})) #collect total sample size
+  probs <- sapply(groups, function(x){nrow(x)}) / N
+  means <- sapply(groups, function(x){mean(x[,2])}) #collect separate means
+  
+  #weighted var is the sum of squared deviations from the mean over all groups divided by the total sample size - number of groups (degrees of freedom)
+  var_W <- sum(sapply(groups, function(x){ 
+    sum((x[,2] - mean(x[,2]))^2)
+  })) / (N-K)
+  
+  return(list(means = means, var_W = var_W, probs = probs))
+}
+estimates(df)
+```
+
+Then the discriminant function for a value x
+```{r}
+deltax <- function(x, df){
+  est <- estimates(df)
+  dx <- x * (est$means/est$var_W) - (est$means^2/(2*est$var_W)) + log(est$probs)
+  return(dx)
+}
+```
+
+and finally to which class a case with $x = 1$ would belong
+```{r}
+dx <- deltax(1, df)
+dx2 <- deltax(-0.3, df)
+paste0("x = 1 would be classified in class: ", which(dx == max(dx)))
+paste0("x = 1 would be classified in class: ", which(dx2 == max(dx2)))
+
+
+```
+And indeed, it does a nice job.
+
+So lets code it into a function that can classify every case with p = 1 and any value for K.
+
+```{r}
+LDA1 <- function(df){
+  K <- length(table(df[,1])) #number of predictors
+  
+  dxs <- matrix(NA, nrow(df), K) #create memory
+  y_pred <- c()
+  for(i in 1:nrow(df)){
+   dxs[i,] <- deltax(df[i,2], df) #calculate value for discriminant function for each case
+   y_pred <- append(y_pred, which(dxs[i,] == max(dxs[i,]))) #where is dk(x) largest?
+  }
+  
+  return(y_pred)
+}
+```
+
+lets see how it does
+```{r}
+predictions <- LDA1(df)
+sum(diag(prop.table(table(true = df[,1], predict = predictions))))
+```
+We see that it correctly classifies 68% of the observations, which is okay, but in many cases not good enough. This is mostly because there is only one predictor. The next algorithm will discuss LDA for when p > 1. 
+
+

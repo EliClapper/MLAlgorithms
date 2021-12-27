@@ -1,0 +1,113 @@
+---
+title: "LDA_multi"
+author: "Eli Clapper"
+date: "27-12-2021"
+output: html_document
+---
+
+In this `.Rmd` file a Linear Discriminant Analysis algorithm for when there are multiple continuous predictors is discussed.
+
+We have already discussed LDA for when p = 1 and continuous. Now let's look at when p > 1 and continuous.
+
+This still assumes a multivariate normal distribution for $\boldsymbol{X}$ and an equal variance/covariance matrix $\boldsymbol{\Sigma}$ of $\boldsymbol{X}$ for every class $k$.
+
+The multivariate normal density is defined as:
+$$
+ f(\boldsymbol{x}) = \frac{1}{\sqrt{(2\pi)^{\frac{n}{2}}|\Sigma|^{1/2}}}e^{-\frac{1}{2}(x-\mu)'\Sigma^{-1}(x-\mu)}
+$$
+LDA assumes every case is drawn from a multivariate density $\sim\mathcal{N}(\mu_k, \boldsymbol{\Sigma})$. If we plug this into Bayes theorem defined as:
+$$
+  P(Y = k| \boldsymbol{X} = \boldsymbol{x_i}) = \frac{f_k(\boldsymbol{x_i})*\pi_k}{\sum^K_{l=1}\pi_lf_l(\boldsymbol{x_i})}
+$$
+And do some algebra, we get a discriminant function that is very similar to the one presented in `LDA_simple.Rmd`:
+
+$$
+\delta_k(\boldsymbol{x}) = \boldsymbol{x_i}^T \boldsymbol{\Sigma}^{-1}\boldsymbol{\mu}_k - \frac{1}{2}\boldsymbol{\mu}_k^T \boldsymbol{\Sigma}^{-1} \boldsymbol{\mu}_k+ \log(\pi_k)
+$$
+Of course we need estimates for $\boldsymbol{\Sigma}$ and all $\boldsymbol{\mu}_k$ and $\pi_k$. The new part is estimating $\boldsymbol{\Sigma}$. We use the `colMeans()` and `cov()` functions that base R provides.
+
+So lets first simulate data. We make sure that the means for the predictors conditional on the group are a bit different.
+```{r}
+set.seed(6164900)
+K <- 2
+P <- 2
+nk <- 100
+Y <- rep(1:K, each = nk)
+X <- cbind(c(rnorm(nk, -0.5), rnorm(nk,0.5)),
+           c(rnorm(nk, -0.3), rnorm(nk, 0.3)))
+
+df <- cbind(Y,X)
+
+```
+
+Function to obtain estimates
+```{r}
+estimates <- function(df){
+  
+  K <- length(table(df[,1])) #number of groups
+  P <- ifelse(is.null(ncol(df)), 1, ncol(df[,2:ncol(df)])) #number of predictors
+  
+  groups <- list() #create memory
+  for(i in 1:K){ #save all groups into separate df
+    groups[[i]] <- df[df[,1] == i,]
+  }
+  
+  N <- sum(sapply(groups, function(x){nrow(x)})) #collect total sample size
+  probs <- sapply(groups, function(x){nrow(x)}) / N #proportions nk of N
+  means <- t(sapply(groups, function(x){colMeans(x[,2:ncol(x)])})) #collect column means. the first row are means for group 1.
+  
+  Sigma <- sapply(groups, function(x){ #obtain covariance matrix for all groups
+    cov(x[,2:ncol(x)])
+  }) 
+  
+  #combine covariance matrices superficially (no weights assumed)
+  Sigma <- sapply(1:(P*P), function(i){ 
+    sum(Sigma[i,]) / P
+  })
+  Sigma <- matrix(Sigma, ncol = P, nrow = P) #create combined covariance matrix
+  
+  
+  return(list(means = means, Sigma = Sigma, probs = probs))
+}
+estimates(df)
+```
+
+Calculate function to obtain values for linear discriminator
+```{r}
+deltax <- function(x, df){
+  est <- estimates(df)
+  
+  dxs <- sapply(1:K, function(i){
+    t1 <- t(x) %*% solve(est$Sigma)%*% est$means[i,]
+    t2 <- 0.5*t(est$means[i,])%*%solve(est$Sigma)%*%est$means[i,]
+    dx <- t1 - t2 + log(est$prob[i])
+  })
+  
+  return(dxs)
+}
+```
+now that we calculate discriminant values, we can create an LDA algorithm for p > 1.
+
+```{r}
+LDA <- function(df){
+  K <- length(table(df[,1])) #number of predictors
+  
+  dxs <- matrix(NA, nrow(df), K) #create memory
+  y_pred <- c()
+  for(i in 1:nrow(df)){
+   dxs[i,] <- deltax(df[i,2:ncol(df)], df) #calculate value for discriminant function for each case
+   y_pred <- append(y_pred, which(dxs[i,] == max(dxs[i,]))) #where is dk(x) largest?
+  }
+  
+  return(y_pred)
+}
+```
+
+Let's see how it does
+```{r}
+predictions <- LDA(df)
+prop.table(table(true = df[,1], predict = predictions))
+sum(diag(prop.table(table(true = df[,1], predict = predictions))))
+
+```
+This does not do much better than chance, but that is to be expected cause the multivariate X is not specified to be related to the outcome.
