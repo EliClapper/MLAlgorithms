@@ -1,0 +1,102 @@
+---
+title: "QDA"
+author: "Eli Clapper"
+date: "28-12-2021"
+output: html_document
+---
+
+In this `.Rmd` file, Quadratic Discriminant Analysis is discussed and an algorithm is created for it. It closely follows the theory discussed in the `LDA` folder and thus theory will only be discussed if it differs from LDA.
+
+QDA is a generalized form of LDA. In LDA, it is assumed that the predictor space of all classes follow a multivariate normal distribution. Also, it assumes that the covariance matrix $\Sigma$ is constant across classes. QDA differs in this regard as it allows $\Sigma_k$ to vary. The predictors of a case in a class thus follow $\sim\mathcal{N}(\mu_k, \Sigma_k)$ instead of $\sim\mathcal{N}(\mu_k, \Sigma)$ as is the case in LDA. This means QDA estimates K covariance matrices and LDA estimates only 1. This decreases the number of degrees of freedom which makes that QDA has more variance and leads to a larger probability of overfitting. However, with a large enough sample size and small number of classes, QDA mostly outperforms LDA.
+
+After a daunting amount of algebra, the discriminant function of QDA becomes:
+$$
+\delta_k(\boldsymbol{x}) = -\frac{1}{2}\boldsymbol{x}^T\Sigma_k^{-1}\boldsymbol{x} + \boldsymbol{x}^T\Sigma_k^{-1}\boldsymbol{\mu}_k - \frac{1}{2}\boldsymbol{\mu}_k^T\Sigma_k^{-1}\boldsymbol{\mu}_k - \frac{1}{2}\log(|\Sigma_k|) + \log(\pi_k)
+$$
+Note that $|\Sigma_k|$ denotes the determinant of $\Sigma_k$.
+This discriminant function is a Quadratic function of $\boldsymbol{x}$ because $\Sigma_k$ is allowed to vary.
+
+Now we will do almost the same as in the `LDA` files and thus can also alot of code from it.
+
+```{r}
+set.seed(6164900)
+K <- 2
+P <- 2
+nk <- 100
+Y <- rep(1:K, each = nk)
+X <- cbind(c(rnorm(nk, -0.5, 2), rnorm(nk,0.5, 1)),
+           c(rnorm(nk, -0.3, 1.5), rnorm(nk, 0.3, 2)))
+
+df <- cbind(Y,X)
+
+```
+
+Function to obtain estimates
+```{r}
+estimates <- function(df){
+  
+  K <- length(table(df[,1])) #number of groups
+  P <- ifelse(is.null(ncol(df)), 1, ncol(df[,2:ncol(df)])) #number of predictors
+  
+  groups <- list() #create memory
+  for(i in 1:K){ #save all groups into separate df
+    groups[[i]] <- df[df[,1] == i,]
+  }
+  
+  N <- sum(sapply(groups, function(x){nrow(x)})) #collect total sample size
+  probs <- sapply(groups, function(x){nrow(x)}) / N #proportions nk of N
+  means <- t(sapply(groups, function(x){colMeans(x[,2:ncol(x)])})) #collect column means. the first row are means for group 1.
+  
+  Sigma <- lapply(groups, function(x){ #obtain covariance matrix for all groups
+    cov(x[,2:ncol(x)])
+  }) 
+  
+  
+  
+  return(list(means = means, Sigma = Sigma, probs = probs))
+}
+estimates(df)
+```
+
+Calculate discriminant function to obtain values for linear discriminator
+```{r}
+deltax <- function(x, df){
+  est <- estimates(df)
+  
+  dxs <- sapply(1:K, function(i){
+    t1 <- -0.5*t(x)%*%solve(est$Sigma[[i]])%*%x
+    t2 <- t(x)%*%solve(est$Sigma[[i]])%*%est$means[i,]
+    t3 <- 0.5*t(est$means[i,])%*%solve(est$Sigma[[i]])%*%est$means[i,]
+    t4 <- 0.5*log(det(est$Sigma[[i]])) + log(est$probs[i])
+    dx <- as.numeric(t1 + t2 - t3) - t4
+  })
+  
+  return(dxs)
+}
+
+```
+now that we calculate discriminant values, we can create an QDA algorithm.
+
+```{r}
+QDA <- function(df){
+  K <- length(table(df[,1])) #number of predictors
+  
+  dxs <- matrix(NA, nrow(df), K) #create memory
+  y_pred <- c()
+  for(i in 1:nrow(df)){
+   dxs[i,] <- deltax(df[i,2:ncol(df)], df) #calculate value for discriminant function for each case
+   y_pred <- append(y_pred, which(dxs[i,] == max(dxs[i,]))) #where is dk(x) largest?
+  }
+  
+  return(y_pred)
+}
+```
+
+Let's see how it does
+```{r}
+predictions <- QDA(df)
+prop.table(table(true = df[,1], predict = predictions))
+sum(diag(prop.table(table(true = df[,1], predict = predictions))))
+
+```
+71.5% of the cases correctly classified.

@@ -1,0 +1,49 @@
+---
+title: "Naive Bayes"
+author: "Eli Clapper"
+date: "28-12-2021"
+output: html_document
+---
+
+In this `.Rmd` file, the Naive Bayes Classifier theory is discussed. It closely follows the theory discussed in the `LDA` and `QDA` folders and thus theory will only be discussed if it differs from those methods. No algorithm will be created in this file, because there are multiple NB classification methods. It will be made clear that 2 methods will be coded in separate files `Hist_estimation.Rmd` and `KDE.Rmd`. 
+
+Recall Bayes theorem, which LDA, QDA and Naive Bayes try to approximate:
+$$
+  P(Y = k| X = x) = \frac{f_k(x)*\pi_k}{\sum^K_{l=1}\pi_lf_l(x)}
+$$
+The main difference between NB, LDA and QDA is that both LDA and QDA assume a multivariate normal density for predictor space $\boldsymbol{X}$. This makes that we can fill in the Probability density function for the multivariate normal density for $f_k(x)$ and $f_l(x)$, simplyfing the calculations. In Naive Bayes, there is only 1 assumption and that is that within class $k$, all predictors are independent. This means that:
+$$
+f_k(x) = \prod^{n_j}_{j=1}f_{jk}(x_j)
+$$
+This means, that the densities of each predictor are allowed to vary, as long as the cases are independent. This means we only need the product of the marginal densities of the predictors and not the joint density of the predictors. This makes estimation way easier. This assumptions is quite strong of course and thus not always hold. Still, NB tends to perform relatively well, even with the assumption violated.
+
+Still, it does require us to estimate every $f_{jk}(x)$ which is difficult. And so here NB shines as there are multiple methods to estimate them. 3 are given of which the final 2 are nonparametric methods which will be coded.
+
+1. We assume that all marginal densities are normal. This essentially is QDA, but with the extra assumption that each $\Sigma_k$ only has non-zero values on the diagonal. Because this essentially is QDA, we do not further discuss this.
+
+2. Histogram Estimation. For example, for each predictor-class combination we make a histogram with $N_b$ bins. For any predictor, we classify an observation into a class where the proportion of individuals in that same bin is highest. Let's explain more elaborately. let $\boldsymbol{Y}$ be a discrete outcome variable that takes 2 values and let $\boldsymbol{X}$ be a random continuous predictor for $\boldsymbol{Y}$ with an unknown distribution. Suppose $N_k = 250$ we observe $x_i = 1.86$. We would make a histogram of X for both values of Y with $N_b = 25$ bins. a case with $x_i = 1.86$ would be classified in the class where the proportion of cases in the same bin as is $x_i = 1.86$ highest. Let us plot to make it even clearer.
+
+```{r}
+set.seed(6164900)
+Nk <- 250
+K <- 2
+
+Y <- rep(1:K, each = Nk)
+X <- c(rpois(Nk, 2) + rnorm(Nk, 0, 0.01), rpois(Nk, 4) + rnorm(Nk, 0, 0.01))
+df <- cbind(Y,X)
+
+g1 <- hist(X[1:Nk],  breaks = 25, plot = F)
+g2 <- hist(X[Nk:length(X)], breaks = 25, plot = F)
+plot(g1, col = rgb(0,1,0,0.5), main = "Histogram of X for both groups",
+     xlab = "X")
+plot(g2, col = rgb(1,0,0,0.5), add = T)
+abline(v = 1.86, lty = 2, lwd = 3, col = "blue")
+legend(5, 35, fill = c("green", "red", "blue"),
+       legend = c("group 1", "group 2", "x = 1.86"))
+
+```
+Because both groups contain an equal amount of cases, we would classify $x_i = 1.86$ as a member of group 1 because the proportion of cases in the same bin as $x_i$ is highest for group 1.
+
+3. Kernel density estimation. **explain KDE**
+
+Since we already coded the first method in the `QDA` folder, we will focus on methods 2 and 3 in this folder.

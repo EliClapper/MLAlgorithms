@@ -1,0 +1,7 @@
+---
+title: "Kernel Density Estimation"
+author: "Eli Clapper"
+date: "28-12-2021"
+output: html_document
+---
+

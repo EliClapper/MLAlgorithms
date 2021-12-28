@@ -110,4 +110,4 @@ prop.table(table(true = df[,1], predict = predictions))
 sum(diag(prop.table(table(true = df[,1], predict = predictions))))
 
 ```
-This does not do much better than chance, but that is to be expected cause the multivariate X is not specified to be related to the outcome.
+We correctly classify 68.5% of the cases.
