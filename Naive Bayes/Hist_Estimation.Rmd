@@ -60,29 +60,7 @@ findprop(1.86, g2)
 ```
 The proportion, which is $f_k(x)$, is highest in group 1, so we assign $x_i = 1.86$ to group 1. 
 
-now we code a function that runs it for the entire df to get proportions
-```{r}
-findprops <- function(df, breaks){
-  K <- length(table(df[,1]))
-  
-  groups <- list() #create memory
-  for(i in 1:K){ #save all groups into separate df
-    groups[[i]] <- df[df[,1] == i,]
-  }
-  
-  hists <- lapply(groups, function(x){
-    hist(x[,2], plot = F, breaks = breaks)
-  })
-  
-  props <- 
-    lapply(hists, function(x){
-      for(i in 1:nrow(df)){
-        findprop(i,x)
-      }})
-    
-  
-}
-```
+
 
 
 Also, let's make the algorithm take multiple predictors. Remember from `Naive_Bayes_Theory.Rmd` that the form of the NB takes on:
@@ -98,43 +76,20 @@ K <- 2
 Y <- rep(1:K, each = Nk)
 X <- cbind(c(rpois(Nk, 2) + rnorm(Nk, 0, 0.01), 
              rpois(Nk, 4) + rnorm(Nk, 0, 0.01)),
-        c(rnorm(Nk, -0.5), rnorm(Nk, 0.5, 1.5)))
+        c(rnorm(Nk, -0.5), rnorm(Nk, 0.5, 1.5)),
+        c(rnorm(Nk*2)))
 df <- cbind(Y,X)
 ```
 
 
-Lets code. First we create a function that gets the product of the proportions for the predictors. **this function makes it impossible to run group 1 on the histogram of group 2**
-```{r}
-prodprops <- function(df, breaks = 25){
-  P <- ifelse(is.null(ncol(df)), 1, ncol(df[,2:ncol(df)])) #number of predictors
 
-  hists <- apply(df[,2:ncol(df)], 2, function(x){ #get histograms for each predictor
-    hist(x, breaks = breaks, plot = F)
-  })
-  
-  #get proportion for all Predictors, but in same group!
-  #we need it for both groups.
-  props <- matrix(0, nrow(df), P) #storage
-  for(p in 2:(P+1)){ #for every predictor
-    propp <- c() #storage
-    for(i in 1:nrow(df)){ #for every case
-      val <- findprop(df[i,p], hists[[(p-1)]]) #get value for case - predictor
-      propp <- append(propp, val) #append it to the storage
-    }
-    props[,(p-1)] <- propp #append vector of values for 1 predictor, but all cases to the storage.
-  }
-  
-  return(apply(props, 1, prod)) #return the product of the proportions
-}
-head(prodprops(df, 25))
-```
-
+let's code
 ```{r}
 HistEst <- function(df, breaks = 25){
   
   N <- nrow(df)
   K <- length(table(df[,1])) #number of groups
-  P <- ifelse(is.null(ncol(df)), 1, ncol(df[,2:ncol(df)])) #number of predictors
+  P <- ifelse(is.null(ncol(df[,2:ncol(df)])), 1, ncol(df[,2:ncol(df)])) #number of predictors
 
   #create separate df for each group
   groups <- list() #create memory
@@ -145,17 +100,39 @@ HistEst <- function(df, breaks = 25){
   probs <- sapply(groups, function(x){nrow(x)}) / N #proportions nk of N
   
   #list with K*P elements where each K elements are of the Pth predictor So if 2 classes and 2 predictors, than element 1 and 2 are for predictor 1.
-  hists <- unlist(lapply(groups, function(y){
+  #hists[[1]] = predictor 1 for both groups
+  hists <- lapply(groups, function(y){
     apply(y[,2:ncol(df)], 2, function(x){ #get histograms for each predictor
       hist(x, breaks = breaks, plot = F)
     })
-  }), recursive = F)
+  })
   
+  #for every i in df[, j], findprop(i, hist[[k]][[j]])
+  
+  props <- matrix(NA, nrow(df), K*P)
   for(j in 1:P){
+    propk <- matrix(NA, nrow(df), P)
     for(i in 1:nrow(df)){
-      findprop(df[i,(j+1)], hists)
+      propi <- c()
+      for(k in 1:length(hists)){
+        pp <- findprop(df[i,(j+1)], hists[[k]][[j]])#for one individual, same predictor, different class
+        propi <- append(propi, pp)
+      }
+      propk[i, ] <- propi
     }
+    #when j = 1 then 1:P, when j = 2, then P+1 to P*2, when j = 3, P+1 to P*3
+    z <- (1:(P*K))[(1:(P*K)) %% 2 == 1]
+    props[ ,z[j]:(z[j]+1)] <- propk
   }
+  
+  #first two columns are for predictor 1, group 1 and 2 .. k.
+  odd <- (1:(P*K))[(1:(P*K)) %% 2 == 1]
+  even <- (1:(P*K))[(1:(P*K)) %% 2 == 2]
+  group1 <-props[,odd]
+  
+  #now we need to multiply column 1 with 3 and 2 with 4.
+  #then multiply with prior
+  #divie by sum of priors + likelihood.
 
   
 
