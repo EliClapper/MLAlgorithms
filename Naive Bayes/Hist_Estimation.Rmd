@@ -56,8 +56,34 @@ findprop <- function(x, histo){
 
 findprop(1.2, g1)
 findprop(1.86, g2)
+
 ```
 The proportion, which is $f_k(x)$, is highest in group 1, so we assign $x_i = 1.86$ to group 1. 
+
+now we code a function that runs it for the entire df to get proportions
+```{r}
+findprops <- function(df, breaks){
+  K <- length(table(df[,1]))
+  
+  groups <- list() #create memory
+  for(i in 1:K){ #save all groups into separate df
+    groups[[i]] <- df[df[,1] == i,]
+  }
+  
+  hists <- lapply(groups, function(x){
+    hist(x[,2], plot = F, breaks = breaks)
+  })
+  
+  props <- 
+    lapply(hists, function(x){
+      for(i in 1:nrow(df)){
+        findprop(i,x)
+      }})
+    
+  
+}
+```
+
 
 Also, let's make the algorithm take multiple predictors. Remember from `Naive_Bayes_Theory.Rmd` that the form of the NB takes on:
 $$
@@ -77,15 +103,17 @@ df <- cbind(Y,X)
 ```
 
 
-Lets code. First we create a function that gets the product of the proportions for the predictors
+Lets code. First we create a function that gets the product of the proportions for the predictors. **this function makes it impossible to run group 1 on the histogram of group 2**
 ```{r}
 prodprops <- function(df, breaks = 25){
   P <- ifelse(is.null(ncol(df)), 1, ncol(df[,2:ncol(df)])) #number of predictors
-  
+
   hists <- apply(df[,2:ncol(df)], 2, function(x){ #get histograms for each predictor
     hist(x, breaks = breaks, plot = F)
   })
   
+  #get proportion for all Predictors, but in same group!
+  #we need it for both groups.
   props <- matrix(0, nrow(df), P) #storage
   for(p in 2:(P+1)){ #for every predictor
     propp <- c() #storage
@@ -97,9 +125,6 @@ prodprops <- function(df, breaks = 25){
   }
   
   return(apply(props, 1, prod)) #return the product of the proportions
-  
-  
-  
 }
 head(prodprops(df, 25))
 ```
@@ -109,13 +134,30 @@ HistEst <- function(df, breaks = 25){
   
   N <- nrow(df)
   K <- length(table(df[,1])) #number of groups
-  probs <- sapply(groups, function(x){nrow(x)}) / N #proportions nk of N
-  
+  P <- ifelse(is.null(ncol(df)), 1, ncol(df[,2:ncol(df)])) #number of predictors
+
   #create separate df for each group
   groups <- list() #create memory
   for(i in 1:K){ #save all groups into separate df
     groups[[i]] <- df[df[,1] == i,]
   }
+  
+  probs <- sapply(groups, function(x){nrow(x)}) / N #proportions nk of N
+  
+  #list with K*P elements where each K elements are of the Pth predictor So if 2 classes and 2 predictors, than element 1 and 2 are for predictor 1.
+  hists <- unlist(lapply(groups, function(y){
+    apply(y[,2:ncol(df)], 2, function(x){ #get histograms for each predictor
+      hist(x, breaks = breaks, plot = F)
+    })
+  }), recursive = F)
+  
+  for(j in 1:P){
+    for(i in 1:nrow(df)){
+      findprop(df[i,(j+1)], hists)
+    }
+  }
+
+  
 
   #apply prodprop() to all classes
   prods <- lapply(groups, function(x){
@@ -123,7 +165,7 @@ HistEst <- function(df, breaks = 25){
   })
 
   #####
-  #We now have the nominator of the bayes classifier. "probs" contains the priors and "prods" contains the products of the proportions of the bins in each predictor. We just need the denominator which is the sum of the prior * those products, so we are almost there...
+  #We need to run findprop on all histograms, the difficult part is that the histograms must only be used on the predictor in df that corresponds to that histogram.
   #####
   
 } 
