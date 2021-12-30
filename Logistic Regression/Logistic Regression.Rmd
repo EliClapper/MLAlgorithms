@@ -1,9 +1,10 @@
 
-In Logistic regression it does not make sense to draw a line through the relationship between X and Y, because Y is either 1 or 0 Drawing a regression line would give real values that can also be decimals.
+In Logistic regression it does not make sense to draw a straight line through the relationship between X and Y, because Y is either 1 or 0. Drawing a straight line would make us predict continuous values on Y, even though Y is binary.
 ```{r}
 set.seed(6164900)
-Y <- rep(0:1, each = 50) #simulate from binomial with probability 0.5
-X1 <- c(rnorm(50, -0.5, 1), rnorm(50, 0.5, 1))
+nk <- 200
+Y <- rep(0:1, each = nk) #simulate from binomial with probability 0.5
+X1 <- c(rnorm(nk, -0.5, 1), rnorm(nk, 0.5, 1))
 
 ```
 
@@ -20,45 +21,67 @@ abline(b0, b1)
 # summary(fit)
 
 ```
-Plugging in OLS estimates gives us a line through the data that would predict very badly, because the outcome is binary and not continuous. So, what essentially is done, is we convert Y into a continuous probability instead of a binary outcome.
+Plugging in OLS estimates gives us a line through the data that would predict very badly, because the outcome is binary and not continuous. So, what essentially is done in logistic regression, is we do not model Y in its binary form, but we model Y in such a way that it can be written as a linear function of X. Such a linear function is called a 'link function'.  
 
-This is done using a sigmoid function that will never go below 0 or above 1. We thus do not model Y itself, but $P(Y = 1|X)$, denoted as p(x). this makes Y continuous. This probability can be modeled with a sigmoid function of X:
+One of those functions is the 'logit' functions. To obtain this, we firstly do not model Y itself, but $P(Y = 1|X)$, denoted as p(x). this makes Y continuous. This probability can be written by taking the sigmoid function of x:
 $$
-p(x) = \frac{e^{\beta_0 + \beta_1X}}{1+e^{\beta_0 + \beta_1X}}
+\begin{align}
+p(x) &= \frac{e^{\beta_0 + \beta X}}{1+e^{\beta_0 + \beta X}} \\ \\
+&= \frac{1}{1+e^{-(\beta_0 + \beta X)}}
+\end{align}
 $$
+The output is within the range [0,1].
+We can code such a function to see what it looks like and how it would predict Y. For the values of $\beta_0$ and $\beta$ we for now put in estimates that are obtained from the `glm()` function because we already know those will fit well.
+```{r}
+px <- function(x, b0, beta){
+  S <- exp(b0+beta*x)
+  return(S/(1+S))
+}
+fitglm <- glm(Y~X1, family = "binomial")
+b0 <- fitglm$coefficients[1]
+beta <- fitglm$coefficients[2]
 
+plot(px(X1, b0, beta), ylab = 'p(x)', main = "model p(x)" )
+lines(px(seq(min(X1), max(X1), length.out = length(X1)), b0, beta), col = 'red')
+points(20, 0.4, col = "blue", pch = 19)
 
-But this makes it difficult to estimate $\beta_0$ and $\beta_1$. 
+```
+The dots are represent the probabilities of Y being 1 given the value on X for that dot. For example, the blue dot at (20, 0.4) will have a 40% probability of belonging to Y = 1, rather than Y = 0. The red line represents the line that would be fit if the interval between all values in X would be equal.
+
+Note that the component that $e$ is raised to in equation 1 is a linear function. So usually, to make the model more understandable in regards to X, the equation is rewritten as a form of $\beta_0 + \beta X$ 
+
 And so we rewrite the model like so:
 $$
 \frac{p(x)}{1-p(x)} = e^{\beta_0 + \beta_1X}
 $$
-and even further to obtain the so called logit function:
+
+and even further to finally obtain logit function:
 $$
-\log(\frac{p(x)}{1-p(x)}) = \beta_0 + \beta_1X
+\ln(\frac{p(x)}{1-p(x)}) = \beta_0 + \beta_1X
 $$
-and we arrive back at a linear function. However, this time the function models the log odds of p(x) and not p(x) itself.
+
+And so we rewrote Y as a linear function of X by first modeling the probability of Y = 1 given X and than taking the log odds of this probability. This means that a change in X, does not increase p(x) with $\beta$, but rather the log odds of p(x). 
 
 
-This makes it easier to estimate $\beta_0$ and $\beta_1$ to make the model fit.
-We estimate them with maximum likelihood which is a method that can be applied for non-linear methods to estimate parameters.
+# Machine Learning
+In this document a gradient descent algorithm is optimized which is done using maximum likelihood estimation [MLE] which is a method that can be applied for non-linear methods to estimate parameters.
 MLE requires a few steps:
-1.) Impose Distribution on Y
+1.) Impose a Distribution on Y
 2.) Find likelihood of Y for one data point
 3.) Given independent data points, likelihood is product of individual likelihoods
 4.) Take the log of the likelihood
-5.) maximize loglikelihood w.r.t parameters to be estimated ($\beta_0$ and $\beta_1$ )
+5.) maximize loglikelihood w.r.t parameters to be estimated ($\beta_0$ and $\beta$ )
 
 1.) Because Y is either 1 or 0, we should treat is as a random variable drawn from a Bernoulli distribution with a succes probability for very case:
 $$
-S_i = \frac{1}{1+e^{-(\beta_0 + \beta_1X_i)}}
+S_i = \frac{1}{1+e^{-(\beta_0 + \beta X_i)}}
 $$
 
 2.) for every case, the $p(Y=y|X=\boldsymbol{x})$ = likelihood =
 $$
 S_i^{y_i} * (1- S_i^{(1-y_i)})
 $$
-3._If we can assume independent observations, the likelihood of this function is the product of this function over all cases.
+3. If we can assume independent observations, the likelihood of this function is the product of this function over all cases.
 so:
 $$
 \begin{align}
@@ -70,63 +93,86 @@ $$
 $$
 LL(\boldsymbol{\beta}) = \sum^n_{i=1}y_i*(\log(S_i) + (1-y_i))*\log(1-S_i)
 $$
-We need to find values for $\beta_0$ and $\beta_1$ that maximize this function. Note that $\beta_0$ and $\beta_1$ are in the term $S$.
+We need to find values for $\beta_0$ and $\beta$ that maximize this function. Note that $\beta_0$ and $\beta$ are in the term $S_i$.
 
-However, conventionally, we use the cost function that follows from this formula, which is:
+Maximizing the log likelihood is equal to minimizing the cost function:
 $$
 C(\boldsymbol{\beta}) = -\frac{\sum^n_{i=1}y_i*(\log(S_i) + (1-y_i))*\log(1-S_i)}{n}
 $$
+This tests how well the predictor space can predict the classes. $C(\boldsymbol{\beta})$ gets lower as X becomes a better predictor for X.
 
-The easiest would be to set the derivative of this function to 0 to find the estimates. Because we have to estimate 2 terms which are dependent on each other, we cannot find solutions for both. This is why we need an optimization algorithm to find a solution. The algorithm we will use is the gradient descent algorithm. It makes use of partial derivatives pf $C(\boldsymbol{\beta})$ w.r.t a certain parameter and iteratively puts in new values for $\boldsymbol{\beta}$ until it is minimized. However, the input is not random, but depends on the previous value of $\beta$
+The easiest would be to set the derivative of this function to 0 to find the estimates. Because we have to estimate $n_{\beta}$ terms which are dependent on each other, we cannot find solutions for both. This is why we need an optimization algorithm to find a solution. It makes use of partial derivatives of $C(\boldsymbol{\beta})$ w.r.t a certain parameter and iteratively puts in new values for $\boldsymbol{\beta}$ until it is minimized. However, the input is not random, but depends on the previous value of $\beta$ and so the algorithm 'learns' with each new iteration.
 
 It can be shown that the partial derivative of the LL function w.r.t a certain parameter for the bernoulli case is:
 $$
-\frac{\partial C(\boldsymbol{\beta})}{\partial \beta_j} = \frac{\sum^n_{i=1}(y_i - S_i)x_{ij}}{n}
+\frac{\partial C(\boldsymbol{\beta})}{\partial \beta_j} = \frac{\sum^n_{i=1}(S_i - y_i)x_{ij}}{n}
 $$ 
 
 lets first generate multivariate data
 ```{r}
-X <- cbind(X1, rnorm(100))
+set.seed(6164901)
+X <- cbind(X1, X2 = c(rnorm(nk, -0.3,1.2), rnorm(nk,0.3,0.8)))
 ```
 
 ```{r}
 GradDescBern <- function(Y, X, rate, thresh, maxit){
+  n <- length(Y) #number of cases
   
-  n <- length(Y)
-  sigmoid <- function(x){
-    return(1/(1+exp(-x)))
+  sigmoid <- function(linpred){ #the sigmoid function
+    return((1/(1+exp(-linpred))))
   }
   
-  X <- cbind(rep(1,n), X)
-  ests <- cbind(replicate(ncol(X), rnorm(1,0,0.001))) #inital values
+  X <- cbind(intercept = rep(1,n), X) #add 1 for intercept
+  ests <- cbind(replicate(ncol(X), rnorm(1,0,0.001))) #initial values
+  Y <- as.matrix(Y) #set Y as matrix for matrix algebra
   
-  y_pred <- sigmoid(X%*%ests) #inital predictions
-  Y <- as.matrix(Y)
+  iter <- pred_rate <- 0 #intial prediction rate and iterion = 0
   
-  iter <- 0
-  
-  pred_rate <- mean(Y == ifelse(y_pred >= 0.5, 1, 0)) #prediction rate
+  store_ests <- matrix(NA, maxit, ncol(X)) #store estimates to trace them
 
   while(pred_rate < thresh){
     
-    y_pred <- sigmoid(X%*%ests)
-    dw <- (t(X)%*%(y_pred - Y))/n #derivatives w.r.t parameter
-    ests <- ests - rate*dw
+    y_pred <- sigmoid(X %*% ests) # predictions
+    db <- (t(X)%*%(y_pred-Y))/n #derivatives w.r.t parameter
+    ests <- ests - rate*db #update estimates
     
-    
-    pred_rate <- mean(Y == ifelse(y_pred >= 0.5, 1, 0))
-    iter <- iter+1
+    pred_rate <- mean(Y == ifelse(y_pred >= 0.5, 1, 0)) #obtain pred rate
+    iter <- iter+1 #update iteration
+    store_ests[iter, ] <- t(ests) #store this iteration of estimates
 
     if(iter == maxit){
       print('maximum iterations reached')
-      return(list(dw, pred_rate))
+      return(estimates = store_ests)
     }
   }
   print(paste0('solution found after ', iter, ' iterations'))
-  return(list(dw, pred_rate))
+  return(estimates = store_ests)
 }  
 
-GradDescBern(Y,X,rate=0.0001, 0.80, 20000) #for some reason, it converges on 0.52 instead of 0.69
-summary(glm(Y~X, family = "binomial"))
+
 
 ```
+
+Now we run the function as well as the `glm()` function for comparison
+```{r}
+estimates <- GradDescBern(Y,X,rate=0.005, 0.80, 10000)
+glmest <- glm(Y~X, family = "binomial")$coefficients
+```
+
+Now we make a traceplot of our estimates and add the `glm()` estimates as constants.
+```{r}
+plot(estimates[,1], col = 'blue', type = 'l', xlab = "Iteration", ylab = 'estimates', main = 'Traceplot Estimates', 
+     ylim = -0.1:0.9)
+lines(estimates[,2], col = 'red', type = 'l')
+lines(estimates[,3], col = 'green', type = 'l')
+
+for(i in 1:3){
+  abline(h = glmest[i], lty = 3, col = 'black')
+}
+
+
+legend(6000, 0.4, legend=c(sprintf("b%d", 1:3), 'Glm estimates'),
+       col=c("blue", "red", "green", "black"), lty=c(1,1,1,3), cex=0.7)
+```
+
+
