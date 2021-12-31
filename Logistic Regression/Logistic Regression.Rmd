@@ -23,7 +23,7 @@ abline(b0, b1)
 ```
 Plugging in OLS estimates gives us a line through the data that would predict very badly, because the outcome is binary and not continuous. So, what essentially is done in logistic regression, is we do not model Y in its binary form, but we model Y in such a way that it can be written as a linear function of X. Such a linear function is called a 'link function'.  
 
-One of those functions is the 'logit' functions. To obtain this, we firstly do not model Y itself, but $P(Y = 1|X)$, denoted as p(x). this makes Y continuous. This probability can be written by taking the sigmoid function of x:
+One of those functions is the 'logit' functions. To obtain this, we firstly write Y not as binary, but as a continuous probability: $P(Y = 1|X)$, denoted as p(x). This makes Y continuous. This probability can be obtained by taking the sigmoid function of x:
 $$
 \begin{align}
 p(x) &= \frac{e^{\beta_0 + \beta X}}{1+e^{\beta_0 + \beta X}} \\ \\
@@ -42,11 +42,11 @@ b0 <- fitglm$coefficients[1]
 beta <- fitglm$coefficients[2]
 
 plot(px(X1, b0, beta), ylab = 'p(x)', main = "model p(x)" )
-lines(px(seq(min(X1), max(X1), length.out = length(X1)), b0, beta), col = 'red')
-points(20, 0.4, col = "blue", pch = 19)
+lines(px(seq(min(X1), max(X1), length.out = length(X1)), b0, beta), col = 'cyan3', lwd = 4)
+points(120, 0.4, col = "deeppink", pch = 19, cex = 1.4)
 
 ```
-The dots are represent the probabilities of Y being 1 given the value on X for that dot. For example, the blue dot at (20, 0.4) will have a 40% probability of belonging to Y = 1, rather than Y = 0. The red line represents the line that would be fit if the interval between all values in X would be equal.
+The dots are represent the probabilities of Y being 1 given the value on X for that dot. For example, the blue dot at (120, 0.4) will have a 40% probability of belonging to Y = 1, rather than Y = 0. The red line represents the line that would be fit if the interval between all values in X would be equal.
 
 Note that the component that $e$ is raised to in equation 1 is a linear function. So usually, to make the model more understandable in regards to X, the equation is rewritten as a form of $\beta_0 + \beta X$ 
 
@@ -55,16 +55,17 @@ $$
 \frac{p(x)}{1-p(x)} = e^{\beta_0 + \beta_1X}
 $$
 
-and even further to finally obtain logit function:
+and even further to finally obtain the logit function:
 $$
 \ln(\frac{p(x)}{1-p(x)}) = \beta_0 + \beta_1X
 $$
 
-And so we rewrote Y as a linear function of X by first modeling the probability of Y = 1 given X and than taking the log odds of this probability. This means that a change in X, does not increase p(x) with $\beta$, but rather the log odds of p(x). 
+And so we rewrote Y as a linear function of X by first modeling the probability of Y = 1 given X and than taking the log odds of this probability. This means that a change in X, does not increase p(x) with $\beta$, but rather the log odds of p(x) is increased with $\beta$. 
 
 
 # Machine Learning
 In this document a gradient descent algorithm is optimized which is done using maximum likelihood estimation [MLE] which is a method that can be applied for non-linear methods to estimate parameters.
+
 MLE requires a few steps:
 1.) Impose a Distribution on Y
 2.) Find likelihood of Y for one data point
@@ -95,11 +96,11 @@ LL(\boldsymbol{\beta}) = \sum^n_{i=1}y_i*(\log(S_i) + (1-y_i))*\log(1-S_i)
 $$
 We need to find values for $\beta_0$ and $\beta$ that maximize this function. Note that $\beta_0$ and $\beta$ are in the term $S_i$.
 
-Maximizing the log likelihood is equal to minimizing the cost function:
+Maximizing the log likelihood is equal to minimizing a/the cost function:
 $$
 C(\boldsymbol{\beta}) = -\frac{\sum^n_{i=1}y_i*(\log(S_i) + (1-y_i))*\log(1-S_i)}{n}
 $$
-This tests how well the predictor space can predict the classes. $C(\boldsymbol{\beta})$ gets lower as X becomes a better predictor for X.
+This tests how well the predictor space can predict the classes. $C(\boldsymbol{\beta})$ gets lower as X becomes a better predictor for Y.
 
 The easiest would be to set the derivative of this function to 0 to find the estimates. Because we have to estimate $n_{\beta}$ terms which are dependent on each other, we cannot find solutions for both. This is why we need an optimization algorithm to find a solution. It makes use of partial derivatives of $C(\boldsymbol{\beta})$ w.r.t a certain parameter and iteratively puts in new values for $\boldsymbol{\beta}$ until it is minimized. However, the input is not random, but depends on the previous value of $\beta$ and so the algorithm 'learns' with each new iteration.
 
@@ -124,9 +125,8 @@ GradDescBern <- function(Y, X, rate, thresh, maxit){
   
   X <- cbind(intercept = rep(1,n), X) #add 1 for intercept
   ests <- cbind(replicate(ncol(X), rnorm(1,0,0.001))) #initial values
-  Y <- as.matrix(Y) #set Y as matrix for matrix algebra
-  
-  iter <- pred_rate <- 0 #intial prediction rate and iterion = 0
+
+  iter <- pred_rate <- 0 #initial prediction rate and iteration = 0
   
   store_ests <- matrix(NA, maxit, ncol(X)) #store estimates to trace them
 
@@ -142,11 +142,11 @@ GradDescBern <- function(Y, X, rate, thresh, maxit){
 
     if(iter == maxit){
       print('maximum iterations reached')
-      return(estimates = store_ests)
+      return(list(estimates = store_ests, pred_rate = pred_rate))
     }
   }
   print(paste0('solution found after ', iter, ' iterations'))
-  return(estimates = store_ests)
+  return(list(estimates = store_ests, pred_rate = pred_rate))
 }  
 
 
@@ -156,10 +156,26 @@ GradDescBern <- function(Y, X, rate, thresh, maxit){
 Now we run the function as well as the `glm()` function for comparison
 ```{r}
 estimates <- GradDescBern(Y,X,rate=0.005, 0.80, 10000)
+estimates$pred_rate #predicted 69% correctly
+
+estimates <- estimates$estimates
 glmest <- glm(Y~X, family = "binomial")$coefficients
 ```
+The estimates obtained from the gradient descent predict 69% of the cases correctly. Let's verify by extracting the final estimates, use them in the sigmoid function to get probabilities and then convert them back to binary values by setting all $p(x) \geq 0.5$ to 1 and the rest 0.
 
-Now we make a traceplot of our estimates and add the `glm()` estimates as constants.
+```{r}
+#obtain estimates
+b0 <- estimates[nrow(estimates), 1]
+b1 <- estimates[nrow(estimates), 2]
+b2 <- estimates[nrow(estimates), 3]
+
+linpred <- b0 + b1*X[,1] + b2*X[,2] #define linear predictor
+y_pred <- 1/(1+exp(-linpred)) #sigmoid function to obtain probabilities
+sum(Y == ifelse(y_pred >= 0.5, 1, 0)) / nrow(X) #prediction rate
+```
+
+
+Now we make a traceplot of our estimates and add the `glm()` estimates as constants to see how close they are to the `glm()` estimates.
 ```{r}
 plot(estimates[,1], col = 'blue', type = 'l', xlab = "Iteration", ylab = 'estimates', main = 'Traceplot Estimates', 
      ylim = -0.1:0.9)
