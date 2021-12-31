@@ -1,3 +1,9 @@
+---
+title: "Logistic Regression"
+author: "Eli Clapper"
+date: "27-12-2021"
+output: html_document
+---
 
 In Logistic regression it does not make sense to draw a straight line through the relationship between X and Y, because Y is either 1 or 0. Drawing a straight line would make us predict continuous values on Y, even though Y is binary.
 ```{r}
