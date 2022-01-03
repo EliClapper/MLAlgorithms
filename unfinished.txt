@@ -1,3 +1,2 @@
 Naive Bayes/Hist_Est.R
 Trees
-Hierarchical Clustering
