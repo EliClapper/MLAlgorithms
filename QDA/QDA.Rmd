@@ -16,7 +16,7 @@ $$
 Note that $|\Sigma_k|$ denotes the determinant of $\Sigma_k$.
 This discriminant function is a Quadratic function of $\boldsymbol{x}$ because $\Sigma_k$ is allowed to vary.
 
-Now we will do almost the same as in the `LDA` files and thus can also alot of code from it.
+Now we will do almost the same as in the `LDA` files and thus can also inherit a lot of script from it.
 
 ```{r}
 set.seed(6164900)
@@ -95,7 +95,7 @@ QDA <- function(df){
 Let's see how it does
 ```{r}
 predictions <- QDA(df)
-prop.table(table(true = df[,1], predict = predictions))
+prop.table(table(observed = df[,1], predicted = predictions))
 sum(diag(prop.table(table(true = df[,1], predict = predictions))))
 
 ```

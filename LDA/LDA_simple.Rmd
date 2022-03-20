@@ -48,7 +48,7 @@ abline(v = 0, lty = 2)
 ```
 The cases in group 1 (the blue density) have a mean of -0.5, whereas the cases in group 2 (red) have a mean of 0.5. If we add both groups together we get a mean of zero. Because both also have the same variance (1) we would say that if for a case X > 0, the case belongs to group red, otherwise to group blue. This 0 is called the Bayes Decision Boundary. This is because the probability is highest of being in class 2 if X > 0. 
 
-In LDA and other classifiers we classify a case based on where $P(Y = k| X = x)$ is highest. It tries to mimick this bayesian decision boundary by calculating the probability of being in a specific class given a cases value on X. For each case we thus get K probabilities as calculated in equation 2. Where the probability is highest, we assign the case to.
+In LDA and other classifiers we classify a case based on where $P(Y = k| X = x)$ is highest. It tries to mimic this bayesian decision boundary by calculating the probability of being in a specific class given a cases value on X. For each case we thus get K probabilities as calculated in equation 2. Where the probability is highest, we assign the case to.
 
 How do we obtain the parameters in equation 2? Some parameters are easily calculated. $\pi_k$ for example can be estimated in the sample by calculating the proportion of cases being in class $k$. Other parameters are a bit different, but lets first combine group 1 and group 2 data into a single matrix.
 ```{r}
@@ -80,7 +80,7 @@ $$
 
 \end{align}
 $$
-which is the mean of each group and a weighted variance factor. So let us code a few function that calculate the estimate for the weighted variance and plug in x = 1 or x = -0.3 into the discriminant function to see where the case with $x = 1$ and $x = -0.3$ would be classified. We would expect the former to be classified in group 2 and the latter in group 1, because we already know that the Bayes Decision Boundary is close to or exactly 0.
+which is the mean of each group and a weighted variance factor. So let us code a few functions that calculate the estimate for the weighted variance and plug in x = 1 or x = -0.3 into the discriminant function to see where the case with $x = 1$ and $x = -0.3$ would be classified. We would expect the former to be classified in group 2 and the latter in group 1, because we already know that the Bayes Decision Boundary is close to or exactly 0.
 
 ```{r}
 estimates <- function(df){
@@ -120,7 +120,7 @@ and finally to which class a case with $x = 1$ would belong
 dx <- deltax(1, df)
 dx2 <- deltax(-0.3, df)
 paste0("x = 1 would be classified in class: ", which(dx == max(dx)))
-paste0("x = 1 would be classified in class: ", which(dx2 == max(dx2)))
+paste0("x = -0.3 would be classified in class: ", which(dx2 == max(dx2)))
 
 
 ```
@@ -148,6 +148,9 @@ lets see how it does
 predictions <- LDA1(df)
 sum(diag(prop.table(table(true = df[,1], predict = predictions))))
 ```
-We see that it correctly classifies 68% of the observations, which is okay, but in many cases not good enough. This is mostly because there is only one predictor. The next algorithm will discuss LDA for when p > 1. 
+We see that it correctly classifies 68% of the observations, which is okay, but in many cases not good enough. This is mostly because there is only one predictor that does not perfectly explain the outcome. 
+
+# outro
+The next algorithm will discuss LDA for when p > 1. 
 
 

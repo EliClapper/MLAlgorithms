@@ -5,6 +5,14 @@ date: "28-12-2021"
 output: html_document
 ---
 
+
+
+
+# IN DEVELOPMENT 
+
+
+
+
 The theory behind this method has been discussed in `Naive_Bayes_Theory`. 
 
 very briefly, this method classifies a case for which the marginal histograms of the predictors have the highest proportion cases in the same bin as the case. if p = 1, it looks as follows:

@@ -4,8 +4,12 @@ author: "Eli Clapper"
 date: "27-12-2021"
 output: html_document
 ---
+# intro
+We handled linear regression, now we have a look at logistic regression. This type of regression deals with an outcome that is binary in nature. This means it can only take on 2 values.
 
 In Logistic regression it does not make sense to draw a straight line through the relationship between X and Y, because Y is either 1 or 0. Drawing a straight line would make us predict continuous values on Y, even though Y is binary.
+
+generate data
 ```{r}
 set.seed(6164900)
 nk <- 200
@@ -14,6 +18,7 @@ X1 <- c(rnorm(nk, -0.5, 1), rnorm(nk, 0.5, 1))
 
 ```
 
+Plot linear relationship
 ```{r}
 source("../Created_Functions.R")
 ols <- OLS(Y, X1) #retrieved from Linear_model.Rmd
@@ -37,7 +42,7 @@ p(x) &= \frac{e^{\beta_0 + \beta X}}{1+e^{\beta_0 + \beta X}} \\ \\
 \end{align}
 $$
 The output is within the range [0,1].
-We can code such a function to see what it looks like and how it would predict Y. For the values of $\beta_0$ and $\beta$ we for now put in estimates that are obtained from the `glm()` function because we already know those will fit well.
+We can code such a function to see what it looks like and how it would predict Y. For the values of $\beta_0$ and $\beta$ we for now put in estimates that are obtained from the `glm()` function because we already know those will likely fit well.
 ```{r}
 px <- function(x, b0, beta){
   S <- exp(b0+beta*x)
@@ -88,6 +93,7 @@ $$
 $$
 S_i^{y_i} * (1- S_i^{(1-y_i)})
 $$
+
 3. If we can assume independent observations, the likelihood of this function is the product of this function over all cases.
 so:
 $$
@@ -96,6 +102,7 @@ L(\boldsymbol{\beta}) &= \prod^n_{i=1}p(Y=y_i|X=\boldsymbol{x_i}) \\
 &= \prod^n_{i=1}S_i^{y_i} * (1- S_i)^{(1-y_i)}
 \end{align}
 $$
+
 4.) To find maximum likelihood estimates, we need to take the derivative of this function at some point. It is easier to do that for the log of the likelihood. And so, the log of the likelihood is:
 $$
 LL(\boldsymbol{\beta}) = \sum^n_{i=1}y_i*(\log(S_i) + (1-y_i))*\log(1-S_i)
@@ -193,8 +200,8 @@ for(i in 1:3){
 }
 
 
-legend(6000, 0.4, legend=c(sprintf("b%d", 1:3), 'Glm estimates'),
-       col=c("blue", "red", "green", "black"), lty=c(1,1,1,3), cex=0.7)
+legend(6000, 0.35, legend=c(sprintf("b%d", 1:3), 'Glm estimates'),
+       col=c("blue", "red", "green", "black"), lty=c(1,1,1,3), cex=0.85)
 ```
 
 

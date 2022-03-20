@@ -1,6 +1,16 @@
+---
+title: "Maximum Likelihood"
+author: "Eli Clapper"
+date: "02/12/2021"
+output: html_document
+---
+
+# intro
+We have talked about the Ordinary Least Squares method to estimate regression parameters. However, there are different methods such as Maximum Likelihood. In this file the concepts of Maximum Likelihood are explained. 
+
 Maximum Likelihood estimation is a way of obtaining unknown parameter that describe the distribution of a random variable.
 
-let us assume a random variable:
+let us assume a standard normally distributed random variable:
 $X \sim \mathcal{N}(\mu = 0,\,\sigma^{2} = 1)\,.$
 
 This means that if we take a sample of $X$ of length 1, denoted as $x_i$, we know it is drawn from this standard normal distribution. We can obtain the likelihood of sampling this specific observation by finding the point on the probability density function [PDF] for which $X = x_i$. In R, this can be obtained using the `dnorm()` function, or we can program a PDF ourselves as we know that the PDF of an normal distribution is:
@@ -15,22 +25,26 @@ normdist <- function(m, s, x){
   return(LL)
 }
 
-normdist(m = 0, s = 1, c(0,1,-1))
-dnorm(c(0,1,-1), mean = 0, sd = 1)
+normdist(m = 0, s = 1, c(0,1,-1)) 
+# dnorm(c(0,1,-1), mean = 0, sd = 1) # this can be ran to check our function against.
+
 ```
-Because 0 is in the middle of $X$ and the variance of $X$ is not extremely large, there is a larger likelihood of finding $X = 0$ than $X = 1$ or $-1$.
+Our function asks: what is the probability of finding x, in a normal distribution with mean $\mu$ and sd $\sigma$.
+Because in our example, 0 is in the middle of $X$ and the variance of $X$ is not extremely large, there is a larger likelihood of finding $X = 0$ than $X = 1$ or $-1$.
 
 If we assume independence between observations $x_i$, we can also easily obtain the likelihood of finding the values -1,0,1 together. Than it is just the product over the individual likelihoods!
 ```{r}
 prod(normdist(m = 0, s = 1, c(0,1,-1)))
 ```
-But this likelihood gets very low very quickly as we have more observations. This is because the likelihood of finding éxactly the values we obtained gets lower. Even if we have 6 observations of the most likely value, 0, the likelihood is
+There is 0.2% probability that we would draw 3 samples of 1 with values 0, 1 and -1.
+
+But this likelihood gets very low very quickly as we have more observations. This is because the likelihood of finding éxactly the values we obtained gets lower and lower. Even if we have 6 observations of the most likely value, 0, the likelihood of drawing 6 observations all having value 0 is very low.
 ```{r}
 prod(normdist(m = 0, s = 1, rep(0,6)))
 ```
 0.4%.
 
-That is partly why oftentimes the Loglikelihood is reported. This is because it transforms the very small values to more easily interpretable numbers. Let's transform some very small likelihoods to their log form.
+That is partly why the Loglikelihood is reported. This is because it transforms the very small values to more easily interpretable numbers. Let's transform some very small likelihoods to their log form.
 ```{r}
 LLs <- c(0.001, 0.00003, 0.004)
 log(LLs)
@@ -49,20 +63,25 @@ $$
   \hat{\sigma}^2 &= \frac{\sum^n_{i=1}(x_i-\hat\mu)^2}{n}
 \end{aligned}
 $$
+
 Which should look familiar. In the case of the normal distribution $\mu$ is called the mean and $\sigma^2$ is called the variance. One thing to note, but not go into details on, is that to obtain an unbiased variance, we need to subtract $n$ with 1. This is called Bessels Correction and leads to an unbiased estimate of $\sigma^2$. The mean and variance are easily obtained using the `mean()` and `var()` function. Lets suppose we observe 3 samples from $X$ $x_1 = 2, x_2 = 1.5, x_3 = 2.7$.
 ```{r}
 X <- c(2,1.5,2.7)
 n <- length(X)
 m <- sum(X)/n
-c(m, mean(X))
+c(ourmean = m, BaseR_mean = mean(X))
 
-s <- sum((X-m)^2)/(n-1)
-c(s,var(X))
+s_sq <- sum((X-m)^2)/(n-1)
+c(ourvar = s_sq, BaseR_var = var(X))
 
 
 
 ```
+Wonderful. We have derived the formulas for the mean and sd of the normal distribution using maximum likelihood estimation!.
 
+# outro
+in the next file we take this concept and apply it to another method of estimating parameters in regression.
+We will have a look at Gradient Descent.
 
 
 

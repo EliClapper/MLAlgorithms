@@ -1,0 +1,119 @@
+---
+title: "Multivariate Linear Ordinary Least Squares"
+author: "Eli Clapper"
+date: "02/12/2021"
+output: html_document
+---
+
+# Intro
+It has already been discussed how to obtain OLS estimates for simple linear regression. However, things become a bit more difficult if we want to estimate coefficients of multiple predictors simultaneously. This file deals with ordinary least squares for multivariate regression.
+
+Let's take a look at the linear form when we have to estimate 2 regression coefficients and one intercept.
+$$y_i = b_0 + b_1x_{1i} + b_2x_{2i} + \epsilon $$
+
+As stated in the file dealing with simple OLS, the general form of linear regression is as follows:
+$$\boldsymbol{Y} = b_0 + \boldsymbol{b}\boldsymbol{X} + \boldsymbol{\epsilon} $$
+where $\boldsymbol{Y}$ represents the vector of the outcome variable, $b_0$ is the intercept, $\boldsymbol{b}$ represents the vector of weights for each input variable in matrix $\boldsymbol{X}$ and $\boldsymbol{\epsilon}$ represents the distance between $\boldsymbol{Y}$ and the linear predictor which is: $b_0 + \boldsymbol{b}\boldsymbol{X}$.
+
+We can further simplify this to:
+$$\boldsymbol{Y} = \boldsymbol{b}\boldsymbol{X} + \boldsymbol{\epsilon} $$
+We can do this because the intercept is constant for all observations. How the intercept is then calculated will be explained shortly.
+
+We still want to minimize $\boldsymbol{\epsilon}$ and because both $\boldsymbol{Y}$ and $\boldsymbol{X}$ are observed we need to find values for $\boldsymbol{b}$ that do this.
+
+If we write the equation above in matrix form we get:
+$$
+\begin{bmatrix}
+y_{1} \\
+y_{2} \\
+y_{3} \\
+\vdots \\
+y_{n}
+\end{bmatrix}
+=
+\begin{bmatrix}
+1 & x_{11} & x_{12} & \cdots & x_{1k} \\
+1 & x_{21} & x_{22} & \cdots & x_{2k} \\
+1 & x_{31} & x_{32} & \cdots & x_{3k} \\
+\vdots & \ddots & \ddots & \vdots \\
+1 & x_{n1} & x_{n2} & \cdots & x_{nk}
+\end{bmatrix}
+*
+\begin{bmatrix}
+b_{0} \\
+b_{1} \\
+b_{2} \\
+\vdots \\
+b_{k}
+\end{bmatrix}
++
+\begin{bmatrix}
+\epsilon_{1} \\
+\epsilon_{2} \\
+\epsilon_{3} \\
+\vdots \\
+\epsilon_{n}
+\end{bmatrix}
+$$
+where n is the number of observations in the sample and k is the number of variables to predict $\boldsymbol{Y}$. To minimize $\epsilon$, we need to find values for $\boldsymbol{b}$, that if we multiply each $b$ with its corresponding vector of $\boldsymbol{X}$, $\sum\boldsymbol{\epsilon}$ is smallest. $b0$ is in this case multiplied with 1 for every observation because it is a constant.
+
+It can mathematically be shown that $\sum\boldsymbol{\epsilon}$ is smallest when:
+$$
+\boldsymbol{b}=(\boldsymbol{X}'\boldsymbol{X})^{-1}\boldsymbol{X}'\boldsymbol{Y}
+$$
+where $\boldsymbol{X}'$ is the transpose of $\boldsymbol{X}$.
+
+So lets build a simple function that obtains OLS estimates and predictions for any number of numeric input variables using linear algebra. First we simulate data.
+
+generate data
+```{r}
+Y <- rnorm(100, 100, 15)
+X <- cbind(Y+rnorm(100, 100, 15), Y + rnorm(100, 100, 20))
+```
+
+Make function. This function does also calculates the standard error and the p-value for the estimates. The theory behind this is not provided, but it is cool to see that they are the same when the `lm()` function is called.
+```{r}
+source("../Created_Functions.R") # load in function metrics().
+
+OLS <- function(y, x){
+  n <- length(y)                                       #number of observations
+  nx <- ifelse(is.null(ncol(x)), length(x), nrow(x))   #obtain number of predictors
+  
+  if(nx != n){stop("lengths y and x differ")}          #make sure x and y are of equal length
+  
+  x <- cbind(rep(1,n),x)                               # add constant for intercept
+  dfs <- n - ncol(x)                                   # degrees of freedom
+  
+  weights <- solve(t(x)%*%x) %*% t(x) %*% y            #obtain weights using linear algebra
+  
+  y_pred <- weights[1] + rowSums(t(t(x[,2:ncol(x)])*weights[2:ncol(x)])) # obtain predicted values
+  e <- y - y_pred                                      # the errors to obtain Standard Errors of the estimates
+  var_res <- as.numeric(t(e)%*%e/dfs)                  #estimate for residual variance
+  varcov_weights <- var_res  * solve(t(x)%*%x)         
+  ses <- sqrt(diag(varcov_weights))                    #obtain standard errrors
+  
+  t_vals <- weights/ses # obtain t-values
+  p_vals <- pt(abs(t_vals), dfs, lower.tail = F) * 2 #probability of this t-value against central t-distribution with Df = dfs, two-tailed
+  
+  metricz <- metrics(y, y_pred)                       #obtain metrics of performance
+  estimates <- cbind(weights, ses, t_vals, p_vals)    #bind results
+  colnames(estimates) <- c("weights", 'SEs', 't-value', 'p-value') #name results
+  rownames(estimates) <- c("b0", sprintf("b%d", 1:(ncol(x)-1)))    #idem
+
+  return(list(estimates = estimates, `degrees of freedom` = dfs, metrics = metricz)) #return list
+}
+```
+
+Let's compare the output to the `lm()` function.
+```{r}
+multivariate_regression <- OLS(Y, X)
+multivariate_regression$estimates
+```
+```{r}
+summary(lm(Y~X))
+```
+
+As you can see the our `OLS()` function gives the exact same estimates as `lm()`.
+
+# Outro
+in the next file we will have a look at a different method to estimate parameters in simple linear regression. This time we will look at Maximum Likelihood.

@@ -1,5 +1,5 @@
 ---
-title: "OLS Estimation"
+title: "Simple OLS Estimation"
 author: "Eli Clapper"
 date: "02/12/2021"
 output: html_document
@@ -18,7 +18,8 @@ set.seed(6164900)
 Y <- rnorm(500, 100, 15)
 X <- Y + rnorm(500, 100, 15)
 ```
-We need values for $b_0$ and $b_1$ so that $\epsilon$ is minimized. There are multiple methods to do this: Ordinary Least Squares, QR decomposition, Maximum likelihood estimation using Gradient Descent to name a few. We first consider one of the easiest methods: Ordinary Least Squares.
+
+We need values for $b_0$ and $b_1$ so that $\epsilon$ is minimized. There are multiple methods to do this: Ordinary Least Squares, QR decomposition, Maximum likelihood estimation using Gradient Descent to name a few. We first consider one of the more comprehensive methods: Ordinary Least Squares.
 
 Ordinary least squares tries to minimize the Residual Sum of Squares (RSS):
 $$ 
@@ -27,6 +28,7 @@ $$
   &= \sum_{i=1}^{n}\epsilon^2_i
 \end{align}
 $$
+
 With one predictor, this equation is simplified to:
 $$RSS = \sum_{i=1}^{n}(y_{i} - \beta_{0} - \beta_{1}x_{i})^2$$
 
@@ -35,8 +37,8 @@ where $y_i$ is the outcome variable for individual i, $\beta_{1}$ is the weight 
 Although not provided, it can be proven that to minimize RSS, the least squares estimates for $b_0$ and $b_1$ are:
 $$
 \begin{align}
-  \hat\beta &= {\frac {{n}\sum {x_{i}y_{i}}-\sum {x_{i}}\sum {y_{i}}}{{n}\sum {x_{i}^{2}}-(\sum {x_{i}})^{2}}} \\
-  \hat{\alpha} &={\bar{y}}-{\hat {\beta }}\,{\bar{x}}
+  \hat\beta_1 &= {\frac {{n}\sum {x_{i}y_{i}}-\sum {x_{i}}\sum {y_{i}}}{{n}\sum {x_{i}^{2}}-(\sum {x_{i}})^{2}}} \\
+  \hat{\beta_0} &={\bar{y}}-{\hat {\beta }}\,{\bar{x}}
 \end{align}
 $$
 
@@ -46,31 +48,31 @@ The OLS estimates would thus be:
 n <- length(Y)
 b1 <- (n*sum(X*Y) - sum(X)*sum(Y)) / (n*sum(X^2) - sum(X)^2)
 b0 <- mean(Y) - b1*mean(X)
-c(b0,b1)
+c(intercept = b0, weight = b1)
 ```
+
 Lets take a look at how well these estimates describe our data by plotting the line
 ```{r}
 plot(X,Y, main = 'Relationship between X and Y')
 abline(a = b0, b = b1)
 ```
+
 We can see that our OLS estimates seem to give a fairly good representation of the data.
 Let us obtain the predicted values, which are the values for X where Y falls on the regression line:
 $\hat{\boldsymbol{Y}} = b_0 + b_1\boldsymbol{X}$. We also define some metrics on which we can evaluate the predicted values. We look at RMSE, Mean Absolute Deviation, Maximal and minimal deviation. 
 ```{r}
 y_pred <- b0 + b1*X
-
 source('../Created_Functions.R')
-
-
 ```
+
 lets see how OLS did
 ```{r}
 metrics(Y, y_pred)
 ```
-Not bad. Also if we obtain the estimates using the `lm` function, we get the similar results for the estimates. Note that the `lm` function uses QR decomposition to find estimates and not OLS. Still the metrics of performance are similar.
+
+Not bad. Also if we obtain the estimates using the `lm` function, we get the same results for the estimates. Note that the `lm` function uses QR decomposition to find estimates and not OLS. Still the metrics of performance are similar.
 ```{r}
 fit.lin <- lm(Y~X)
-summary(fit.lin)
 metrics(Y, fit.lin$fitted.values)
 ```
 
@@ -102,3 +104,8 @@ y_pred_test <- b0 + b1*test_input
 metrics(test_outcome, y_pred_test)
 
 ```
+
+It can be seen that performance is slightly worse than when predicted the outcome on the same data that the model was estimated. The amount of variance explained in the outcome is now a bit lower and we see that the RMSE is somewhat higher. This is to be expected however, because in the cross-validation example we predicted the outcome on data that was *not* used to estimate the model parameters.
+
+# Outro
+In the next file we will take a look at how OLS works when we have multiple variables in the model to explain the outcome.

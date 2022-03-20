@@ -1,10 +1,14 @@
 ---
-title: "Gradient Descent Estimation"
+title: "Gradient Descent Estimation for Linear Regression"
 author: "Eli Clapper"
 date: "02/12/2021"
 output: html_document
 ---
 
+# intro
+In this file we have a look at linear regression using gradient descent rather than OLS.
+
+generate some data
 ```{r}
 set.seed(6164900)
 Y <- rnorm(500, 100, 15)
@@ -13,7 +17,7 @@ X <- Y + rnorm(500, 100, 15)
 
 Another way of finding $b_0$ and $b_1$ is to use a gradient descent algorithm.
 This implies we need the gradient of the RSS which are the derivatives of the RSS with respect to $b_0$ and $b_1$.
-Where this gradient is lowest, the error is minimized. This concept is explained in `Maximum_Likelihood.Rmd`. Gradient Ascent/Descent is an iterative method where we continually put in different values for $b_0$ and $b_1$ until we find the lowest value we can find. This concept is explained in `ML_Gradient_Ascent.Rmd`
+Where this gradient is lowest, the error is minimized. This concept is explained in `Maximum_Likelihood.Rmd`. Gradient Ascent/Descent is an iterative method where we continually put in different values for $b_0$ and $b_1$ until we find the lowest value for RSS we can find with our observed data. This concept is explained in `ML_Gradient_Ascent.Rmd`
 
 So I just provide the derivatives here for simple linear regression and create the algorithm.
 $$
@@ -23,7 +27,7 @@ $$
 \end{align}
 $$
 
-the function below produces same stimate for b1 as `lm()`, but intercept seems random
+One thing I added is a threshold for the Mean Squared Error that must be reached before we are satisfied with the results. This means that if the mean of the errors, which is the outcome - predicted outcome, squared is smaller than some threshold, we stop the algorithm prematurely cause the model has satisfied our needs.
 ```{r}
 GradientDescent <- function(Y, X, l_rate = 1E-6, thresh = 10, max_iter = 10000){
   b0 <- runif(1) #set initial values
@@ -72,7 +76,7 @@ Let see how the hold up against the `lm` function
 estimates
 coef(lm(Y~X))
 ```
-The coefficient for the predictor, the slope, is very similar. The intercept is different, but this does not matter, because the point where X crosses Y is very far away and variation in the intercept does not affect the final regression line alot.
+The coefficient for the predictor, the slope, is very similar. The intercept is different, but this does not matter, because the point where X crosses Y is very far away and variation in the intercept does not affect the final regression line a lot.
 
 #evaluate using cross-validation
 ```{r}

@@ -1,4 +1,11 @@
-In regression, K-Nearest Neighbours is an algorithm where the predicted value of a case is some value that characterizes the nearest K neighbours of that case. For example, we assign the mean of the nearest three cases to the candidate case that those three points are the nearest too.
+---
+title: "K Nearest Neighbours"
+author: "Eli Clapper"
+date: "27-12-2021"
+output: html_document
+---
+
+In regression problems, K-Nearest Neighbours is an algorithm where the predicted value of a case is some value that characterizes the nearest K neighbours of that case. For example, we assign the mean of the nearest three cases to the candidate case that those three points are the nearest too.
 
 Let's illustrate in a graphical example.
 
@@ -45,12 +52,12 @@ Now that we can calculate Euclidean Distances for two cases, we can try to do it
 EDs1 <- sapply(1:nrow(df_wo_case), function(i){
   EDist(case, df_wo_case[i, 2:ncol(df)])
 })
-length(EDs1)
+c(length = length(EDs1))
 EDs1
 ```
 Now we want to know the K neighbours that have the lowest Eucledian distances and take the mean over their values on the outcome variable. That would be the predicted value for the candidate. 
 
-Now lets see do a program a KNN for the first case in the data set and see how well we predict with 3 different values of K (1, 10, 80).
+Now lets see make a KNN program for the first case in the data set and see how well we predict with 3 different values of K (1, 10, 80).
 ```{r}
 predcase1 <- function(K){
   
@@ -86,7 +93,7 @@ for(i in c(1, 10, 80)){
 We plot the predicted and actual values on the density of Y to get an idea how many standard deviations the predicted value is away from the actual. You can see that the predicted value gets better as K gets smaller. It could be argued that this is expected as it is likely that similar cases in the input data also have similar values on the outcome value. However, if we choose very small values of K, than there are very little neighbours, which makes the variance of the algorithm way bigger. A too big K however, might have little variance, but will have large bias. The best value for K is usually chosen using cross-validation. Also, with low values for K, the predicted value is based on very little data, which also could, instead of improving, worse the fit.
 
 So now lets code a KNN for the entire dataframe and obtain predicted values and see how our function does for different values of K. We evaluate the algorithm by using certain ML metrics such as $RMSE$, $MAD$ and $R^2$.
-The function does require the outcome variable to be the first column of the matrix. Afterwards we wiill evaluate the algorithm on a separate testing and training set.
+The function requires the outcome variable to be the first column of the matrix. Afterwards we will evaluate the algorithm on a separate testing and training set.
 
 ```{r}
 KNN <- function(df, K){
@@ -133,7 +140,7 @@ eval <- lapply(c(1,10,80, 99), function(i){
   metrics(Y, pred)
 })
 ```
-you can see that the variance gets lower the more cases we use as neighbours, with it being almost zero as K = nrow(df)-1.
+you can see that the variance of the predicted values gets lower the more cases we use as neighbours, with it being almost zero as K = nrow(df)-1. This makes sense because as we use more neighbours, the values become more similar. If K = 1, the predicted value only depends on 1 other observation. While if K = N, then every case gets assigned the mean of the entire matrix.
 
 ```{r}
 names(eval) <- c("k=1", "k=10", "k=80", "k=99")
@@ -143,9 +150,9 @@ For k = 1 and k = 99, $R^2$ is negative, indicating that just using the mean of 
 
 #evaluate using cross-validation
 
-We will know evaluate the algorithm using cross-validation with K = 100. It requires a bit of recoding, because the test and train data must be put in separately. Besides, for the test data, only the input is required to obtain estimates we can compare the observed scores too.
+We will know evaluate the algorithm using cross-validation. It requires a bit of recoding, because the test and train data must be put in separately. Besides, for the test data, only the input data is required to obtain estimates of the outcome.
 
-generate data
+generate data and split into train and test.
 ```{r}
 set.seed(6164900)
 Y <- rnorm(500)
@@ -161,8 +168,9 @@ test_input <- test[, 2:ncol(test)]
 
 rewrite function
 ```{r}
-KNN_CV <- function(train, test_input, K){
+KNN_CV <- function(train, test, K){
   
+  test_input <- test[,2:ncol(test)]
   ntest <- ifelse(is.null(ncol(test_input)), length(test_input), nrow(test_input)) #cases in testset
   nptest <- ifelse(is.null(ncol(test_input)), 1, 0) #predictors in testset
   
@@ -193,14 +201,27 @@ KNN_CV <- function(train, test_input, K){
     predict1(x)
   })
   
-  return(y_pred)
+  mets <- metrics(test[,1], y_pred)
+  
+  return(mets)
 }
 ```
 
-run function, obtain estimates and compare
+run function on different values of K, obtain R2. we then extract the condition for which R2 is maximum and this is the value for K we deem best.
 ```{r}
-estimates <- KNN_CV(train, test_input, 100)
-metrics(test[,1], estimates)
+Ks <- seq(1, 100, 5) #conditions for K
+
+predictions <- matrix(NA, length(Ks), 5) #create matrix to store metrics in 
+colnames(predictions) <- c("RMSE", "MAD", "MaxDev", "MinDev", "R2") #give names
+rownames(predictions) <- paste0("K = ", Ks)                         #give names
+for(i in seq_along(Ks)){          #for every K in ks, run the CV
+  predictions[i, ] <- KNN_CV(train, test, Ks[i])
+} 
+
+#obtain best condition by getting the rowname of the row where R2 is highest.
+best_K <- names(which(predictions[, 'R2'] == max(predictions[, 'R2'])))
+c(best_condition = best_K)
+predictions[best_K, ]
 
 ```
-The algorithm does okay, but not terrific **probably has to do with how data is simulated**
+The algorithm does okay, with an RMSE of 0.64 and R2 of 40% when K = 31.

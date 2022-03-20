@@ -4,11 +4,10 @@ author: "Eli Clapper"
 date: "19/12/2021"
 output: html_document
 ---
+# intro
+Finally, to conclude linear regression, we make a gradient descent algorithm for multivariate regression.
 
-
-**Gradient descent below**
-
-generate random data.
+Generate random data.
 ```{r}
 set.seed(6164900)
 Y <- rnorm(100, 0, 3)
@@ -74,10 +73,14 @@ GD_Multi <- function(Y, x, l_rate = 1E-3, thresh = 1, maxit = 5000){
 
 }
 
+```
+run it
+```{r}
 set.seed(6164900)
 estimates <- GD_Multi(Y = Y, x = X, maxit = 10000, l_rate = 1E-3)
-
 ```
+
+
 lets test it against OLS estimates
 ```{r}
 source("../Created_Functions.R")
@@ -86,7 +89,9 @@ OLSests <- OLS(Y,X)
 OLSests$estimates[,1]
 
 ```
+The estimates are very close to the OLS estimates with the function we created in `Multi_Linear_OLS.Rmd`
 
+We also make a traceplot to check the gradient descent estimates against the OLS estimates.
 ```{r}
 plot(estimates[,1], col = 'blue', type = 'l', xlab = "Iteration", ylab = 'estimates', main = 'Traceplot Estimates', 
      ylim = -0.5:0.5)
@@ -104,4 +109,4 @@ legend(6000, 0, legend=c(sprintf("b%d", 1:4), 'OLS estimates'),
 
 ```
 
-
+Perfect.

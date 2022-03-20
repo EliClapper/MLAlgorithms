@@ -60,11 +60,6 @@ What this formula is saying is that the distance between two clusters is the min
 
 # Loading libraries and data
 
-Since the goal of this manuscript is to code the algorithm from scratch, only the `tidyverse` will be used. When coding the algorithm from scratch, it will be compared to the function `hclust()` found in base `R`. 
-```{r message=FALSE, warning=FALSE}
-library(tidyverse)
-```
-
 In this manuscript, the in-built `iris` data will be used. This is because it is openly available for anyone to use and because there are existing labels for the clusters, which in this case are the species. The data set will be shortened to 15 observations for simplicity. Additionally, an `.csv` version of the `iris` data is available in the `Data` folder. 
 ```{r}
 #taking only a small portion of the iris data
@@ -264,8 +259,9 @@ hclust_ours <- hclustScratch(dist = dist_calc)
 hclust_r <- hclust(d = dist(df[, -5]), method = "single")
 
 #comparing the 2 outputs
-hclust_ours$Height
-round(hclust_r$height, digits = 2)
+ours <- hclust_ours$Height
+hclustr <- round(hclust_r$height, digits = 2)
+cbind(ours = ours, Rs = hclustr)
 ```
 
 In this case, `height` which is a set of $n-1$ (length of the distance matrix minus 1) values of the criterion (minimum distance between clusters/observations) associated with the clustering method (single linkage) for the particular agglomeration (iteration). As you can see, the output from our function completely matches the output from the base `R` `hclust()` function. So, we were successful in creating a hierarchical clustering algorithm using single linkage from scratch.

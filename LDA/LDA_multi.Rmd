@@ -15,6 +15,7 @@ The multivariate normal density is defined as:
 $$
  f(\boldsymbol{x}) = \frac{1}{\sqrt{(2\pi)^{\frac{n}{2}}|\Sigma|^{1/2}}}e^{-\frac{1}{2}(x-\mu)'\Sigma^{-1}(x-\mu)}
 $$
+
 LDA assumes every case is drawn from a multivariate density $\sim\mathcal{N}(\mu_k, \boldsymbol{\Sigma})$. If we plug this into Bayes theorem defined as:
 $$
   P(Y = k| \boldsymbol{X} = \boldsymbol{x_i}) = \frac{f_k(\boldsymbol{x_i})*\pi_k}{\sum^K_{l=1}\pi_lf_l(\boldsymbol{x_i})}
@@ -106,7 +107,7 @@ LDA <- function(df){
 Let's see how it does
 ```{r}
 predictions <- LDA(df)
-prop.table(table(true = df[,1], predict = predictions))
+prop.table(table(observed = df[,1], predicted = predictions))
 sum(diag(prop.table(table(true = df[,1], predict = predictions))))
 
 ```
