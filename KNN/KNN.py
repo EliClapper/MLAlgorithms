@@ -22,11 +22,18 @@ def PredictSingleCase(caseindex, df, K):
     df_wo_case = df.drop(index = caseindex)                       # create df without the specific case we would like to predict
     for i in [x for x in list(range(len(df))) if x != caseindex]: # for i in list of 1 to n where caseindex is not included
         EucDists.append(EucDist(df.loc[caseindex], df_wo_case.loc[i])) # get all euclidean distances for that case
-    KNNs = pd.Series(EucDist) #make Series of the Euclidean Distances
-    KNNs.index = [x for x in list(range(len(df))) if x != caseindex] #make index numbers true to df_wo_case so that we can subset df_wo_case for the correct indices
+    KNNs = pd.Series(EucDists, index = [x for x in list(range(len(df))) if x != caseindex]) #make Series of the Euclidean Distances and indexe true to when caseindex is not included
     KNNs = KNNs.sort_values()[:K] #sort ascending where only K neighbours with the lowest ED's are retained
     return(df_wo_case.loc[KNNs.index]['y'].mean()) # return the mean of the K neighbours on the outcome variable which is the predicted value for the case
 
 ### Now only the function remains that does the actual KNN.
+def KNN(df, K):
+    predicted = []
+    for i in range(len(df)):
+        predicted.append(PredictSingleCase(i, df, K))
+    return(pd.Series(predicted, index = range(0,len(df))))
 
-    
+# its a slow algorithm, but it works. Got to optimize
+preds = KNN(df, 3)
+RMSE = (((df['y'] - preds)**2).mean())**0.5
+MAD = (df['y'].abs() - preds.abs()).mean()
