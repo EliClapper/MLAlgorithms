@@ -1,16 +1,26 @@
+r'''
+DISCLAIMER! THIS FILE IS NOT ORIGINALLY CREATED BY ME. IT IS USED FOR
+PRACTICE PURPOSES. ALL CREDITS GO TO:
+
+https://machinelearningmastery.com/simple-genetic-algorithm-from-scratch-in-python/
+'''
+
 import numpy as np
 
-
-# First we set an evaluation function. This function takes the negative sum of all elements in a parent
-# We artificially say that the lower the better.
-# Individuals will be lists of n_bits bits, if an individual has only 1's, it is perfect
+r'''
+ First we set an evaluation function. This function takes the negative sum of all elements in a parent
+ We artificially say that the lower the better.
+ Individuals will be lists of n_bits bits, if an individual has only 1's, it is perfect
+''' 
 def OneMax(x):
     return(-sum(x))
 
-# This is a selection mechanism where parents can be chosen multiple times dependent on performance
-# we sample a parent and check its value against k - 1 other parents
-# out of these 3 parents, the score of the best parent is returned
-# this particular form of selection is called a tournament selection
+r'''
+ This is a selection mechanism where parents can be chosen multiple times dependent on performance
+ we sample a parent and check its value against k - 1 other parents
+ out of these 3 parents, the score of the best parent is returned
+ this particular form of selection is called a tournament selection
+'''
 def Selection(pop, scores, k = 3):
     selection_ix = np.random.randint(len(pop)) #obtain random parent
     for ix in np.random.randint(0,len(pop), k - 1): # for k -1 other parents
@@ -18,10 +28,12 @@ def Selection(pop, scores, k = 3):
             selection_ix = ix
     return(pop[selection_ix])
 
-# the probability of a crossover happening is 85%
-# if crossover does not happen, the children get same bits as their parents.
-# when it does, child1 gets the last pt = n random bits from parent1 and the first pt random bits from p2
-# c2 gets last pt from parent 2 and first pt from p1
+r'''
+ the probability of a crossover happening is 85%
+ if crossover does not happen, the children get same bits as their parents.
+ when it does, child1 gets the last pt = n random bits from parent1 and the first pt random bits from p2
+ c2 gets last pt from parent 2 and first pt from p1
+'''
 def Crossover(p1, p2, r_cross = 0.85):
     c1, c2 = p1.copy(), p2.copy()
     if np.random.rand() < r_cross:
